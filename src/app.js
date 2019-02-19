@@ -21,8 +21,8 @@ function configScene (scene, camera) {
   )
   box.name = 'mybox'
   plane.name = 'myplane'
-  scene.add(box)
   scene.add(plane)
+  scene.add(box)
   plane.rotation.x += THREE.Math.degToRad(90)
   box.position.y += box.geometry.parameters.height * 0.5
 
@@ -65,6 +65,6 @@ function render (init) {
   })
 }
 
-const environment3d = init(container, configScene)
-render(environment3d)
-console.log(environment3d)
+window.environment3d = init(container, configScene)
+render(window.environment3d)
+console.log(window.environment3d)

@@ -33003,8 +33003,8 @@ function configScene(scene, camera) {
   }));
   box.name = 'mybox';
   plane.name = 'myplane';
-  scene.add(box);
   scene.add(plane);
+  scene.add(box);
   plane.rotation.x += THREE.Math.degToRad(90);
   box.position.y += box.geometry.parameters.height * 0.5;
   camera.position.x = 1;
@@ -33047,9 +33047,9 @@ function render(init) {
   });
 }
 
-var environment3d = init(container, configScene);
-render(environment3d);
-console.log(environment3d);
+window.environment3d = init(container, configScene);
+render(window.environment3d);
+console.log(window.environment3d);
 },{"three":"../node_modules/three/build/three.module.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
