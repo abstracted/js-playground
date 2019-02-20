@@ -32994,12 +32994,15 @@ var container = {
 };
 
 function configScene(scene, camera) {
-  var box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
-    color: 0x00ff00
+  var box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({
+    color: 'rgb(155, 155, 155)'
   }));
-  var plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshBasicMaterial({
-    color: 0xff0000,
+  var plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshPhongMaterial({
+    color: 'rgb(125, 125, 125)',
     side: THREE.DoubleSide
+  }));
+  var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 24), new THREE.MeshBasicMaterial({
+    color: 'rgb(255, 255, 255)'
   }));
   box.name = 'mybox';
   plane.name = 'myplane';
@@ -33011,6 +33014,10 @@ function configScene(scene, camera) {
   camera.position.y = 2;
   camera.position.z = 5;
   camera.lookAt(box.position.x, box.position.y, box.position.z);
+  var light = new THREE.PointLight('rgb(255, 255, 255)', 1);
+  light.add(sphere);
+  scene.add(light);
+  light.position.y = 1.8;
 }
 
 function init(container, configScene) {
@@ -33025,6 +33032,7 @@ function init(container, configScene) {
   configScene(scene, camera);
   var renderer = new THREE.WebGLRenderer();
   renderer.setSize(container.width(), container.height());
+  renderer.setClearColor('rgb(205, 205, 205)');
   container.el.appendChild(renderer.domElement);
   return {
     scene: scene,
@@ -33077,7 +33085,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33013" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "44979" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

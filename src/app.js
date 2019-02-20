@@ -13,12 +13,17 @@ const container = {
 function configScene (scene, camera) {
   const box = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    new THREE.MeshPhongMaterial({ color: 'rgb(155, 155, 155)' })
   )
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(5, 5),
-    new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
+    new THREE.MeshPhongMaterial({ color: 'rgb(125, 125, 125)', side: THREE.DoubleSide })
   )
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 24, 24),
+    new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
+  )
+
   box.name = 'mybox'
   plane.name = 'myplane'
   scene.add(plane)
@@ -30,6 +35,11 @@ function configScene (scene, camera) {
   camera.position.y = 2
   camera.position.z = 5
   camera.lookAt(box.position.x, box.position.y, box.position.z)
+
+  const light = new THREE.PointLight('rgb(255, 255, 255)', 1)
+  light.add(sphere)
+  scene.add(light)
+  light.position.y = 1.8
 }
 
 function init (container, configScene) {
@@ -49,6 +59,7 @@ function init (container, configScene) {
   configScene(scene, camera)
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(container.width(), container.height())
+  renderer.setClearColor('rgb(205, 205, 205)')
   container.el.appendChild(renderer.domElement)
   return { scene, camera, renderer }
 }
