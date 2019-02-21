@@ -26,6 +26,7 @@
     "autoprefixer": "^9.4.7",
     "babel": "^6.23.0",
     "browserlist": "^1.0.1",
+    "dat.gui": "^0.7.5",
     "gitignore": "^0.6.0",
     "stylus": "^0.54.5",
     "three": "^0.101.1"
