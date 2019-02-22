@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import OrbitControls from 'three-orbitcontrols'
+import * as dat from 'dat.gui'
+const gui = new dat.GUI()
 
 const container = {
   el: document.querySelector('#scene'),
@@ -11,35 +14,56 @@ const container = {
 }
 
 function configScene (scene, camera) {
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshPhongMaterial({ color: 'rgb(155, 155, 155)' })
-  )
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    new THREE.MeshPhongMaterial({ color: 'rgb(125, 125, 125)', side: THREE.DoubleSide })
-  )
   const sphere = new THREE.Mesh(
     new THREE.SphereGeometry(0.1, 24, 24),
     new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
   )
-
-  box.name = 'mybox'
-  plane.name = 'myplane'
-  scene.add(plane)
-  scene.add(box)
-  plane.rotation.x += THREE.Math.degToRad(90)
-  box.position.y += box.geometry.parameters.height * 0.5
-
-  camera.position.x = 1
-  camera.position.y = 2
-  camera.position.z = 5
-  camera.lookAt(box.position.x, box.position.y, box.position.z)
-
   const light = new THREE.PointLight('rgb(255, 255, 255)', 1)
+  light.castShadow = true
   light.add(sphere)
   scene.add(light)
-  light.position.y = 1.8
+  light.intensity = 2
+  light.position.x = 0
+  light.position.y = 2
+  light.position.z = 0
+  gui.add(light, 'intensity', 0, 5, 0.1)
+  gui.add(light.position, 'x', -10, 10, 0.1)
+  gui.add(light.position, 'y', 0, 10, 0.1)
+  gui.add(light.position, 'z', -10, 10, 0.1)
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshPhongMaterial({
+      color: 'rgb(125, 125, 125)',
+      side: THREE.DoubleSide
+    })
+  )
+  plane.name = 'myplane'
+  plane.receiveShadow = true
+  plane.rotation.x += THREE.Math.degToRad(90)
+  scene.add(plane)
+
+  const boxGrid = new THREE.Group()
+
+  for (let x = -2.5; x <= 2.5; x++) {
+    for (let z = -2.5; z <= 2.5; z++) {
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.8, 0.8),
+        new THREE.MeshPhongMaterial({ color: 'rgb(155, 155, 155)' })
+      )
+      box.name = `box-${x}-${z}`
+      box.castShadow = true
+      box.position.x = x * 1.8
+      box.position.z = z * 1.8
+      boxGrid.add(box)
+    }
+  }
+  boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5
+  scene.add(boxGrid)
+
+  camera.position.x = 3
+  camera.position.y = 3
+  camera.position.z = 3
+  camera.lookAt(0, 0, 0)
 }
 
 function init (container, configScene) {
@@ -59,18 +83,17 @@ function init (container, configScene) {
   configScene(scene, camera)
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(container.width(), container.height())
+  renderer.shadowMap.enabled = true
   renderer.setClearColor('rgb(205, 205, 205)')
   container.el.appendChild(renderer.domElement)
-  return { scene, camera, renderer }
+  const controls = new OrbitControls(camera, renderer.domElement)
+  return { scene, camera, renderer, controls }
 }
 
 function render (init) {
-  const { scene, camera, renderer } = init
-  const box = scene.getObjectByName('mybox')
-  const plane = scene.getObjectByName('myplane')
-  box.rotation.z += 0.005
-  plane.rotation.z -= 0.005
+  const { scene, camera, renderer, controls } = init
   renderer.render(scene, camera)
+  controls.update()
   window.requestAnimationFrame(() => {
     render(init)
   })
