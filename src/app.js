@@ -18,14 +18,12 @@ function configScene (scene, camera) {
     new THREE.SphereGeometry(0.1, 24, 24),
     new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
   )
-  const light = new THREE.PointLight('rgb(255, 255, 255)', 1)
+  const light = new THREE.SpotLight('rgb(255, 255, 255)', 1)
   light.castShadow = true
+  light.penumbra = 0.5
   light.add(sphere)
   scene.add(light)
-  light.intensity = 2
-  light.position.x = 0
-  light.position.y = 2
-  light.position.z = 0
+  light.position.y = 3
   gui.add(light, 'intensity', 0, 5, 0.1)
   gui.add(light.position, 'x', -10, 10, 0.1)
   gui.add(light.position, 'y', 0, 10, 0.1)
@@ -60,9 +58,8 @@ function configScene (scene, camera) {
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5
   scene.add(boxGrid)
 
-  camera.position.x = 3
-  camera.position.y = 3
-  camera.position.z = 3
+  camera.position.x = 8
+  camera.position.y = 4
   camera.lookAt(0, 0, 0)
 }
 
