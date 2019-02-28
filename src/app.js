@@ -18,16 +18,31 @@ function configScene (scene, camera) {
     new THREE.SphereGeometry(0.1, 24, 24),
     new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
   )
-  const light = new THREE.SpotLight('rgb(255, 255, 255)', 1)
+  const light = new THREE.DirectionalLight('rgb(255, 255, 255)', 1.5)
+  light.position.y = 5
+  light.position.x = -5
+  light.position.z = -5
   light.castShadow = true
   light.penumbra = 0.5
+  light.shadow.bias = 0.001
+  light.shadow.mapSize.width = 4096
+  light.shadow.mapSize.height = 4096
+  light.shadow.camera.top = 10
+  light.shadow.camera.bottom = -10
+  light.shadow.camera.left = -10
+  light.shadow.camera.right = 10
+  const helper = new THREE.CameraHelper(light.shadow.camera)
   light.add(sphere)
   scene.add(light)
-  light.position.y = 3
+  scene.add(helper)
   gui.add(light, 'intensity', 0, 5, 0.1)
-  gui.add(light.position, 'x', -10, 10, 0.1)
-  gui.add(light.position, 'y', 0, 10, 0.1)
-  gui.add(light.position, 'z', -10, 10, 0.1)
+  gui.add(light.position, 'x', -20, 20, 0.1)
+  gui.add(light.position, 'y', 0, 20, 0.1)
+  gui.add(light.position, 'z', -20, 20, 0.1)
+  gui.add(light, 'penumbra', 0, 1, 0.1)
+  gui.add(light.shadow, 'bias', 0, 1, 0.001)
+  const amLight = new THREE.AmbientLight('rgb(120,0,255)', 0.8)
+  scene.add(amLight)
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(20, 20),
     new THREE.MeshPhongMaterial({
@@ -58,8 +73,8 @@ function configScene (scene, camera) {
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5
   scene.add(boxGrid)
 
-  camera.position.x = 8
-  camera.position.y = 4
+  camera.position.x = 10
+  camera.position.y = 8
   camera.lookAt(0, 0, 0)
 }
 

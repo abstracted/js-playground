@@ -36971,16 +36971,31 @@ function configScene(scene, camera) {
   var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 24), new THREE.MeshBasicMaterial({
     color: 'rgb(255, 255, 255)'
   }));
-  var light = new THREE.SpotLight('rgb(255, 255, 255)', 1);
+  var light = new THREE.DirectionalLight('rgb(255, 255, 255)', 1.5);
+  light.position.y = 5;
+  light.position.x = -5;
+  light.position.z = -5;
   light.castShadow = true;
   light.penumbra = 0.5;
+  light.shadow.bias = 0.001;
+  light.shadow.mapSize.width = 4096;
+  light.shadow.mapSize.height = 4096;
+  light.shadow.camera.top = 10;
+  light.shadow.camera.bottom = -10;
+  light.shadow.camera.left = -10;
+  light.shadow.camera.right = 10;
+  var helper = new THREE.CameraHelper(light.shadow.camera);
   light.add(sphere);
   scene.add(light);
-  light.position.y = 3;
+  scene.add(helper);
   gui.add(light, 'intensity', 0, 5, 0.1);
-  gui.add(light.position, 'x', -10, 10, 0.1);
-  gui.add(light.position, 'y', 0, 10, 0.1);
-  gui.add(light.position, 'z', -10, 10, 0.1);
+  gui.add(light.position, 'x', -20, 20, 0.1);
+  gui.add(light.position, 'y', 0, 20, 0.1);
+  gui.add(light.position, 'z', -20, 20, 0.1);
+  gui.add(light, 'penumbra', 0, 1, 0.1);
+  gui.add(light.shadow, 'bias', 0, 1, 0.001);
+  var amLight = new THREE.AmbientLight('rgb(120,0,255)', 0.8);
+  scene.add(amLight);
   var plane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshPhongMaterial({
     color: 'rgb(125, 125, 125)',
     side: THREE.DoubleSide
@@ -37006,8 +37021,8 @@ function configScene(scene, camera) {
 
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5;
   scene.add(boxGrid);
-  camera.position.x = 8;
-  camera.position.y = 4;
+  camera.position.x = 10;
+  camera.position.y = 8;
   camera.lookAt(0, 0, 0);
 }
 
@@ -37077,7 +37092,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52474" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "65131" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
