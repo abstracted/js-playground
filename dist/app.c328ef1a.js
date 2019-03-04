@@ -36957,6 +36957,34 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 var gui = new dat.GUI();
+var clock = new THREE.Clock();
+var grid = {
+  size: 32,
+  box: 1,
+  distance: 4,
+  frequency: 0.5,
+  wavelength: 0.02,
+  amplitude: 10
+};
+gui.add(grid, 'frequency', 0, 10, 0.01);
+gui.add(grid, 'wavelength', 0, 1, 0.001);
+gui.add(grid, 'amplitude', 0, 40, 0.001);
+
+function fourQuadrantGrid(size, callback) {
+  var offset = size / 2;
+  var start = offset * -1;
+  var i = 1;
+  var r = size * size;
+
+  for (var x = start; x < offset; x++) {
+    for (var y = start; y < offset; y++) {
+      callback(x, y, i, r);
+      i++;
+      r--;
+    }
+  }
+}
+
 var container = {
   el: document.querySelector('#scene'),
   height: function height() {
@@ -36968,61 +36996,38 @@ var container = {
 };
 
 function configScene(scene, camera) {
-  var sphere = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 24), new THREE.MeshBasicMaterial({
-    color: 'rgb(255, 255, 255)'
-  }));
-  var light = new THREE.DirectionalLight('rgb(255, 255, 255)', 1.5);
-  light.position.y = 5;
-  light.position.x = -5;
-  light.position.z = -5;
+  var light = new THREE.DirectionalLight(0xffffff, 1.5);
   light.castShadow = true;
-  light.penumbra = 0.5;
+  light.shadow.camera.top = 50;
+  light.shadow.camera.bottom = -50;
+  light.shadow.camera.left = -50;
+  light.shadow.camera.right = 50;
   light.shadow.bias = 0.001;
-  light.shadow.mapSize.width = 4096;
-  light.shadow.mapSize.height = 4096;
-  light.shadow.camera.top = 10;
-  light.shadow.camera.bottom = -10;
-  light.shadow.camera.left = -10;
-  light.shadow.camera.right = 10;
-  var helper = new THREE.CameraHelper(light.shadow.camera);
-  light.add(sphere);
+  light.shadow.mapSize.width = 8192;
+  light.shadow.mapSize.height = 8192;
+  light.position.set(25, 50, 25);
+  light.lookAt(0, 0, 0);
   scene.add(light);
-  scene.add(helper);
-  gui.add(light, 'intensity', 0, 5, 0.1);
-  gui.add(light.position, 'x', -20, 20, 0.1);
-  gui.add(light.position, 'y', 0, 20, 0.1);
-  gui.add(light.position, 'z', -20, 20, 0.1);
-  gui.add(light, 'penumbra', 0, 1, 0.1);
-  gui.add(light.shadow, 'bias', 0, 1, 0.001);
-  var amLight = new THREE.AmbientLight('rgb(120,0,255)', 0.8);
-  scene.add(amLight);
-  var plane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshPhongMaterial({
-    color: 'rgb(125, 125, 125)',
-    side: THREE.DoubleSide
-  }));
-  plane.name = 'myplane';
-  plane.receiveShadow = true;
-  plane.rotation.x += THREE.Math.degToRad(90);
-  scene.add(plane);
+  var ambient = new THREE.AmbientLight('rgb(60,0,155)', 2);
+  scene.add(ambient);
+  scene.fog = new THREE.FogExp2('rgb(20,0,155)', 0.0055);
   var boxGrid = new THREE.Group();
-
-  for (var x = -2.5; x <= 2.5; x++) {
-    for (var z = -2.5; z <= 2.5; z++) {
-      var box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshPhongMaterial({
-        color: 'rgb(155, 155, 155)'
-      }));
-      box.name = "box-".concat(x, "-").concat(z);
-      box.castShadow = true;
-      box.position.x = x * 1.8;
-      box.position.z = z * 1.8;
-      boxGrid.add(box);
-    }
-  }
-
+  fourQuadrantGrid(grid.size, function (x, y, offset) {
+    var box = new THREE.Mesh(new THREE.BoxGeometry(grid.box, grid.box, grid.box), new THREE.MeshPhongMaterial({
+      color: 'rgb(165, 165, 165)'
+    }));
+    box.name = "box-".concat(x, "-").concat(y);
+    box.castShadow = true;
+    box.position.x = x * grid.distance;
+    box.position.z = y * grid.distance;
+    boxGrid.add(box);
+  });
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5;
+  boxGrid.name = 'boxGrid';
   scene.add(boxGrid);
-  camera.position.x = 10;
-  camera.position.y = 8;
+  camera.position.x = 100;
+  camera.position.z = 25;
+  camera.position.y = 25;
   camera.lookAt(0, 0, 0);
 }
 
@@ -37039,7 +37044,7 @@ function init(container, configScene) {
   var renderer = new THREE.WebGLRenderer();
   renderer.setSize(container.width(), container.height());
   renderer.shadowMap.enabled = true;
-  renderer.setClearColor('rgb(205, 205, 205)');
+  renderer.setClearColor('rgb(020,0,155)');
   container.el.appendChild(renderer.domElement);
   var controls = new _threeOrbitcontrols.default(camera, renderer.domElement);
   return {
@@ -37057,6 +37062,10 @@ function render(init) {
       controls = init.controls;
   renderer.render(scene, camera);
   controls.update();
+  fourQuadrantGrid(grid.size, function (x, y, i, r) {
+    var box = scene.getObjectByName("box-".concat(x, "-").concat(y));
+    box.position.y = Math.sin(clock.getElapsedTime() * grid.frequency + (x + r / 16) * (y + i * -0.4) * grid.wavelength) * grid.amplitude;
+  });
   window.requestAnimationFrame(function () {
     render(init);
   });
@@ -37064,7 +37073,6 @@ function render(init) {
 
 window.environment3d = init(container, configScene);
 render(window.environment3d);
-console.log(window.environment3d);
 },{"three":"../node_modules/three/build/three.module.js","three-orbitcontrols":"../node_modules/three-orbitcontrols/OrbitControls.js","dat.gui":"../node_modules/dat.gui/build/dat.gui.module.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -37092,7 +37100,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "65131" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54112" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

@@ -2,6 +2,34 @@ import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
 import * as dat from 'dat.gui'
 const gui = new dat.GUI()
+const clock = new THREE.Clock()
+
+const grid = {
+  size: 32,
+  box: 1,
+  distance: 4,
+  frequency: 0.5,
+  wavelength: 0.02,
+  amplitude: 10
+}
+
+gui.add(grid, 'frequency', 0, 10, 0.01)
+gui.add(grid, 'wavelength', 0, 1, 0.001)
+gui.add(grid, 'amplitude', 0, 40, 0.001)
+
+function fourQuadrantGrid (size, callback) {
+  let offset = size / 2
+  let start = offset * -1
+  let i = 1
+  let r = size * size
+  for (let x = start; x < offset; x++) {
+    for (let y = start; y < offset; y++) {
+      callback(x, y, i, r)
+      i++
+      r--
+    }
+  }
+}
 
 const container = {
   el: document.querySelector('#scene'),
@@ -14,67 +42,41 @@ const container = {
 }
 
 function configScene (scene, camera) {
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
-  )
-  const light = new THREE.DirectionalLight('rgb(255, 255, 255)', 1.5)
-  light.position.y = 5
-  light.position.x = -5
-  light.position.z = -5
+  const light = new THREE.DirectionalLight(0xffffff, 1.5)
   light.castShadow = true
-  light.penumbra = 0.5
+  light.shadow.camera.top = 50
+  light.shadow.camera.bottom = -50
+  light.shadow.camera.left = -50
+  light.shadow.camera.right = 50
   light.shadow.bias = 0.001
-  light.shadow.mapSize.width = 4096
-  light.shadow.mapSize.height = 4096
-  light.shadow.camera.top = 10
-  light.shadow.camera.bottom = -10
-  light.shadow.camera.left = -10
-  light.shadow.camera.right = 10
-  const helper = new THREE.CameraHelper(light.shadow.camera)
-  light.add(sphere)
+  light.shadow.mapSize.width = 8192
+  light.shadow.mapSize.height = 8192
+  light.position.set(25, 50, 25)
+  light.lookAt(0, 0, 0)
   scene.add(light)
-  scene.add(helper)
-  gui.add(light, 'intensity', 0, 5, 0.1)
-  gui.add(light.position, 'x', -20, 20, 0.1)
-  gui.add(light.position, 'y', 0, 20, 0.1)
-  gui.add(light.position, 'z', -20, 20, 0.1)
-  gui.add(light, 'penumbra', 0, 1, 0.1)
-  gui.add(light.shadow, 'bias', 0, 1, 0.001)
-  const amLight = new THREE.AmbientLight('rgb(120,0,255)', 0.8)
-  scene.add(amLight)
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshPhongMaterial({
-      color: 'rgb(125, 125, 125)',
-      side: THREE.DoubleSide
-    })
-  )
-  plane.name = 'myplane'
-  plane.receiveShadow = true
-  plane.rotation.x += THREE.Math.degToRad(90)
-  scene.add(plane)
+  const ambient = new THREE.AmbientLight('rgb(60,0,155)', 2)
+  scene.add(ambient)
+  scene.fog = new THREE.FogExp2('rgb(20,0,155)', 0.0055)
 
   const boxGrid = new THREE.Group()
-
-  for (let x = -2.5; x <= 2.5; x++) {
-    for (let z = -2.5; z <= 2.5; z++) {
-      const box = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 0.8, 0.8),
-        new THREE.MeshPhongMaterial({ color: 'rgb(155, 155, 155)' })
-      )
-      box.name = `box-${x}-${z}`
-      box.castShadow = true
-      box.position.x = x * 1.8
-      box.position.z = z * 1.8
-      boxGrid.add(box)
-    }
-  }
+  fourQuadrantGrid(grid.size, (x, y, offset) => {
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(grid.box, grid.box, grid.box),
+      new THREE.MeshPhongMaterial({ color: 'rgb(165, 165, 165)' })
+    )
+    box.name = `box-${x}-${y}`
+    box.castShadow = true
+    box.position.x = x * grid.distance
+    box.position.z = y * grid.distance
+    boxGrid.add(box)
+  })
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5
+  boxGrid.name = 'boxGrid'
   scene.add(boxGrid)
 
-  camera.position.x = 10
-  camera.position.y = 8
+  camera.position.x = 100
+  camera.position.z = 25
+  camera.position.y = 25
   camera.lookAt(0, 0, 0)
 }
 
@@ -96,7 +98,7 @@ function init (container, configScene) {
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(container.width(), container.height())
   renderer.shadowMap.enabled = true
-  renderer.setClearColor('rgb(205, 205, 205)')
+  renderer.setClearColor('rgb(020,0,155)')
   container.el.appendChild(renderer.domElement)
   const controls = new OrbitControls(camera, renderer.domElement)
   return { scene, camera, renderer, controls }
@@ -106,6 +108,15 @@ function render (init) {
   const { scene, camera, renderer, controls } = init
   renderer.render(scene, camera)
   controls.update()
+  fourQuadrantGrid(grid.size, (x, y, i, r) => {
+    const box = scene.getObjectByName(`box-${x}-${y}`)
+    box.position.y = Math.sin(
+      clock.getElapsedTime() *
+      grid.frequency +
+      ((x + (r / 16)) * (y + (i * -0.4))) *
+      grid.wavelength
+    ) * grid.amplitude
+  })
   window.requestAnimationFrame(() => {
     render(init)
   })
@@ -113,4 +124,3 @@ function render (init) {
 
 window.environment3d = init(container, configScene)
 render(window.environment3d)
-console.log(window.environment3d)
