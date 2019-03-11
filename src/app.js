@@ -1,21 +1,44 @@
 import * as THREE from 'three'
-import OrbitControls from 'three-orbitcontrols'
 import * as dat from 'dat.gui'
+import OrbitControls from 'three-orbitcontrols'
+import noise from 'noisejs-ilmiont'
 const gui = new dat.GUI()
+noise.seed(Math.random())
 const clock = new THREE.Clock()
 
 const grid = {
   size: 32,
   box: 1,
-  distance: 4,
-  frequency: 0.5,
-  wavelength: 0.02,
-  amplitude: 10
+  distance: 5,
+  wavelength: {
+    x: 16,
+    y: 16
+  },
+  frequency: 0.25,
+  amplitude: 5,
+  noInvert: false,
+  terrain: true,
+  tAmplitude: 8,
+  tSmooth: true,
+  tSmoothAmount: 16,
+  scale: true,
+  scaleSize: 0.5
 }
 
-gui.add(grid, 'frequency', 0, 10, 0.01)
-gui.add(grid, 'wavelength', 0, 1, 0.001)
-gui.add(grid, 'amplitude', 0, 40, 0.001)
+const guiWaveProps = gui.addFolder('Wave Properties')
+const guiWavelength = guiWaveProps.addFolder('Wavelength')
+guiWavelength.add(grid.wavelength, 'x', 0.01, 128.0, 0.001)
+guiWavelength.add(grid.wavelength, 'y', 0.01, 128.0, 0.001)
+guiWaveProps.add(grid, 'frequency', 0.001, 5.0, 0.001)
+guiWaveProps.add(grid, 'amplitude', 1, 64, 0.001)
+const guiTerrainProps = gui.addFolder('Terrain Properties')
+guiTerrainProps.add(grid, 'scale')
+guiTerrainProps.add(grid, 'scaleSize', 0.001, 20, 0.001)
+guiTerrainProps.add(grid, 'noInvert')
+guiTerrainProps.add(grid, 'terrain')
+guiTerrainProps.add(grid, 'tAmplitude', 1, 64, 0.001)
+guiTerrainProps.add(grid, 'tSmooth')
+guiTerrainProps.add(grid, 'tSmoothAmount', 0.001, 100, 0.001)
 
 function fourQuadrantGrid (size, callback) {
   let offset = size / 2
@@ -56,10 +79,10 @@ function configScene (scene, camera) {
   scene.add(light)
   const ambient = new THREE.AmbientLight('rgb(60,0,155)', 2)
   scene.add(ambient)
-  scene.fog = new THREE.FogExp2('rgb(20,0,155)', 0.0055)
+  scene.fog = new THREE.FogExp2('rgb(20,0,155)', 0.0045)
 
   const boxGrid = new THREE.Group()
-  fourQuadrantGrid(grid.size, (x, y, offset) => {
+  fourQuadrantGrid(grid.size, (x, y) => {
     const box = new THREE.Mesh(
       new THREE.BoxGeometry(grid.box, grid.box, grid.box),
       new THREE.MeshPhongMaterial({ color: 'rgb(165, 165, 165)' })
@@ -74,9 +97,9 @@ function configScene (scene, camera) {
   boxGrid.name = 'boxGrid'
   scene.add(boxGrid)
 
+  camera.position.y = 100
   camera.position.x = 100
-  camera.position.z = 25
-  camera.position.y = 25
+  camera.position.z = 100
   camera.lookAt(0, 0, 0)
 }
 
@@ -101,6 +124,7 @@ function init (container, configScene) {
   renderer.setClearColor('rgb(020,0,155)')
   container.el.appendChild(renderer.domElement)
   const controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableKeys = false
   return { scene, camera, renderer, controls }
 }
 
@@ -108,14 +132,38 @@ function render (init) {
   const { scene, camera, renderer, controls } = init
   renderer.render(scene, camera)
   controls.update()
+  const time = clock.getElapsedTime()
   fourQuadrantGrid(grid.size, (x, y, i, r) => {
     const box = scene.getObjectByName(`box-${x}-${y}`)
-    box.position.y = Math.sin(
-      clock.getElapsedTime() *
-      grid.frequency +
-      ((x + (r / 16)) * (y + (i * -0.4))) *
-      grid.wavelength
+    let mod = noise.perlin3(
+      x / grid.wavelength.x,
+      y / grid.wavelength.y,
+      time * grid.frequency
     ) * grid.amplitude
+    mod += 0.001
+    if (grid.scale) {
+      let scale = mod + grid.scaleSize
+      if (scale > 4.5) scale = 4.5
+      box.scale.x = scale
+      box.scale.z = scale
+    } else {
+      box.scale.x = 1 + grid.scaleSize
+      box.scale.z = 1 + grid.scaleSize
+    }
+    if (grid.terrain) {
+      let ypos = mod * grid.tAmplitude
+      if (grid.tSmooth) {
+        if (ypos < -0.001) {
+          ypos /= grid.tSmoothAmount
+        }
+      }
+      if (grid.noInvert) {
+        ypos = Math.abs(ypos)
+      }
+      box.position.y = ypos
+    } else {
+      box.position.y = 0
+    }
   })
   window.requestAnimationFrame(() => {
     render(init)
