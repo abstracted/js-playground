@@ -37481,10 +37481,20 @@ function configScene(scene, camera) {
   boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5;
   boxGrid.name = 'boxGrid';
   scene.add(boxGrid);
-  camera.position.y = 100;
-  camera.position.x = 100;
+  var yaw = new THREE.Group();
+  var pitch = new THREE.Group();
+  pitch.add(camera);
+  yaw.add(pitch);
+  scene.add(yaw);
   camera.position.z = 100;
-  camera.lookAt(0, 0, 0);
+  yaw.rotation.y = 2.25;
+  pitch.rotation.x = -0.5;
+  gui.add(camera.position, 'x', -100, 100, 0.001).name('Left/Right');
+  gui.add(camera.position, 'y', -100, 100, 0.001).name('Up/Down');
+  gui.add(camera.position, 'z', -100, 100, 0.001).name('Forward/Back');
+  gui.add(pitch.rotation, 'x', -Math.PI, Math.PI, 0.0001).name('Pitch');
+  gui.add(yaw.rotation, 'y', -Math.PI, Math.PI, 0.0001).name('Yaw');
+  gui.add(camera.rotation, 'z', -Math.PI, Math.PI, 0.0001).name('Rotate');
 }
 
 function init(container, configScene) {
@@ -37502,23 +37512,18 @@ function init(container, configScene) {
   renderer.shadowMap.enabled = true;
   renderer.setClearColor('rgb(020,0,155)');
   container.el.appendChild(renderer.domElement);
-  var controls = new _threeOrbitcontrols.default(camera, renderer.domElement);
-  controls.enableKeys = false;
   return {
     scene: scene,
     camera: camera,
-    renderer: renderer,
-    controls: controls
+    renderer: renderer
   };
 }
 
 function render(init) {
   var scene = init.scene,
       camera = init.camera,
-      renderer = init.renderer,
-      controls = init.controls;
+      renderer = init.renderer;
   renderer.render(scene, camera);
-  controls.update();
   var time = clock.getElapsedTime();
   fourQuadrantGrid(grid.size, function (x, y, i, r) {
     var box = scene.getObjectByName("box-".concat(x, "-").concat(y));
@@ -37587,7 +37592,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50926" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "61839" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

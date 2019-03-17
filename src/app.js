@@ -97,10 +97,23 @@ function configScene (scene, camera) {
   boxGrid.name = 'boxGrid'
   scene.add(boxGrid)
 
-  camera.position.y = 100
-  camera.position.x = 100
+  const yaw = new THREE.Group()
+  const pitch = new THREE.Group()
+
+  pitch.add(camera)
+  yaw.add(pitch)
+  scene.add(yaw)
+
   camera.position.z = 100
-  camera.lookAt(0, 0, 0)
+  yaw.rotation.y = 2.25
+  pitch.rotation.x = -0.5
+
+  gui.add(camera.position, 'x', -100, 100, 0.001).name('Left/Right')
+  gui.add(camera.position, 'y', -100, 100, 0.001).name('Up/Down')
+  gui.add(camera.position, 'z', -100, 100, 0.001).name('Forward/Back')
+  gui.add(pitch.rotation, 'x', -Math.PI, Math.PI, 0.0001).name('Pitch')
+  gui.add(yaw.rotation, 'y', -Math.PI, Math.PI, 0.0001).name('Yaw')
+  gui.add(camera.rotation, 'z', -Math.PI, Math.PI, 0.0001).name('Rotate')
 }
 
 function init (container, configScene) {
@@ -123,23 +136,21 @@ function init (container, configScene) {
   renderer.shadowMap.enabled = true
   renderer.setClearColor('rgb(020,0,155)')
   container.el.appendChild(renderer.domElement)
-  const controls = new OrbitControls(camera, renderer.domElement)
-  controls.enableKeys = false
-  return { scene, camera, renderer, controls }
+  return { scene, camera, renderer }
 }
 
 function render (init) {
-  const { scene, camera, renderer, controls } = init
+  const { scene, camera, renderer } = init
   renderer.render(scene, camera)
-  controls.update()
   const time = clock.getElapsedTime()
   fourQuadrantGrid(grid.size, (x, y, i, r) => {
     const box = scene.getObjectByName(`box-${x}-${y}`)
-    let mod = noise.perlin3(
-      x / grid.wavelength.x,
-      y / grid.wavelength.y,
-      time * grid.frequency
-    ) * grid.amplitude
+    let mod =
+      noise.perlin3(
+        x / grid.wavelength.x,
+        y / grid.wavelength.y,
+        time * grid.frequency
+      ) * grid.amplitude
     mod += 0.001
     if (grid.scale) {
       let scale = mod + grid.scaleSize
