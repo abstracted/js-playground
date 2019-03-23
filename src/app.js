@@ -1,58 +1,6 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
-import OrbitControls from 'three-orbitcontrols'
-import noise from 'noisejs-ilmiont'
 const gui = new dat.GUI()
-noise.seed(Math.random())
-const clock = new THREE.Clock()
-
-const grid = {
-  size: 32,
-  box: 1,
-  distance: 5,
-  wavelength: {
-    x: 16,
-    y: 16
-  },
-  frequency: 0.25,
-  amplitude: 5,
-  noInvert: false,
-  terrain: true,
-  tAmplitude: 8,
-  tSmooth: true,
-  tSmoothAmount: 16,
-  scale: true,
-  scaleSize: 0.5
-}
-
-const guiWaveProps = gui.addFolder('Wave Properties')
-const guiWavelength = guiWaveProps.addFolder('Wavelength')
-guiWavelength.add(grid.wavelength, 'x', 0.01, 128.0, 0.001)
-guiWavelength.add(grid.wavelength, 'y', 0.01, 128.0, 0.001)
-guiWaveProps.add(grid, 'frequency', 0.001, 5.0, 0.001)
-guiWaveProps.add(grid, 'amplitude', 1, 64, 0.001)
-const guiTerrainProps = gui.addFolder('Terrain Properties')
-guiTerrainProps.add(grid, 'scale')
-guiTerrainProps.add(grid, 'scaleSize', 0.001, 20, 0.001)
-guiTerrainProps.add(grid, 'noInvert')
-guiTerrainProps.add(grid, 'terrain')
-guiTerrainProps.add(grid, 'tAmplitude', 1, 64, 0.001)
-guiTerrainProps.add(grid, 'tSmooth')
-guiTerrainProps.add(grid, 'tSmoothAmount', 0.001, 100, 0.001)
-
-function fourQuadrantGrid (size, callback) {
-  let offset = size / 2
-  let start = offset * -1
-  let i = 1
-  let r = size * size
-  for (let x = start; x < offset; x++) {
-    for (let y = start; y < offset; y++) {
-      callback(x, y, i, r)
-      i++
-      r--
-    }
-  }
-}
 
 const container = {
   el: document.querySelector('#scene'),
@@ -64,56 +12,160 @@ const container = {
   }
 }
 
-function configScene (scene, camera) {
-  const light = new THREE.DirectionalLight(0xffffff, 1.5)
-  light.castShadow = true
-  light.shadow.camera.top = 50
-  light.shadow.camera.bottom = -50
-  light.shadow.camera.left = -50
-  light.shadow.camera.right = 50
-  light.shadow.bias = 0.001
-  light.shadow.mapSize.width = 8192
-  light.shadow.mapSize.height = 8192
-  light.position.set(25, 50, 25)
-  light.lookAt(0, 0, 0)
-  scene.add(light)
-  const ambient = new THREE.AmbientLight('rgb(60,0,155)', 2)
-  scene.add(ambient)
-  scene.fog = new THREE.FogExp2('rgb(20,0,155)', 0.0045)
+function changeColor (property, color) {
+  property.color.set(color)
+}
 
-  const boxGrid = new THREE.Group()
-  fourQuadrantGrid(grid.size, (x, y) => {
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(grid.box, grid.box, grid.box),
-      new THREE.MeshPhongMaterial({ color: 'rgb(165, 165, 165)' })
-    )
-    box.name = `box-${x}-${y}`
-    box.castShadow = true
-    box.position.x = x * grid.distance
-    box.position.z = y * grid.distance
-    boxGrid.add(box)
+function configLights (scene, camera) {
+  const params = {
+    color: 0xffffff,
+    amColor: 0xffffff
+  }
+  const guiLightControls = gui.addFolder('Light Controls')
+  const amLight = new THREE.AmbientLight(params.amColor, 0)
+  const guiAmbientLight = guiLightControls.addFolder('Ambient')
+  guiAmbientLight.add(amLight, 'intensity', 0, 5, 0.1)
+  guiAmbientLight.addColor(params, 'amColor').onChange(() => {
+    changeColor(amLight, params.amColor)
   })
-  boxGrid.position.y = boxGrid.children[0].geometry.parameters.height * 0.5
-  boxGrid.name = 'boxGrid'
-  scene.add(boxGrid)
+  scene.add(amLight)
+  for (let i = 0; i < 2; i++) {
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 24, 24),
+      new THREE.MeshBasicMaterial({ color: params.color })
+    )
+    const light = new THREE.PointLight(params.color, 1)
+    light.position.y = 10
+    light.position.x = -8
+    light.position.z = -8
+    if (i > 0) {
+      light.intensity = 0.5
+      light.position.x = light.position.x * -1
+    }
+    light.castShadow = true
+    light.shadow.mapSize.width = 2048
+    light.shadow.mapSize.height = 2048
+    light.add(sphere)
+    scene.add(light)
+    const folder = guiLightControls.addFolder(`Light ${i + 1}`)
+    folder.add(light, 'intensity', 0, 5, 0.1)
+    folder.addColor(params, 'color').onChange(() => {
+      changeColor(light, params.color)
+      changeColor(sphere.material, params.color)
+    })
+    folder.add(light.position, 'x', -20, 20, 0.1)
+    folder.add(light.position, 'y', 0, 20, 0.1)
+    folder.add(light.position, 'z', -20, 20, 0.1)
+  }
+}
+function configGround (scene, size) {
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshPhongMaterial({
+      color: 'rgb(125, 125, 125)',
+      side: THREE.DoubleSide
+    })
+  )
+  plane.name = 'myplane'
+  plane.receiveShadow = true
+  plane.rotation.x += THREE.Math.degToRad(90)
+  scene.add(plane)
+}
 
-  const yaw = new THREE.Group()
+function configCamera (camera, scene, config) {
+  // Create the null objects for pitch and yaw
   const pitch = new THREE.Group()
+  const yaw = new THREE.Group()
 
+  // Add the camera to pitch controller
+  // Camera should be the deepest nested item in the rig
   pitch.add(camera)
+  // Add the pitch controller to yaw the contoller
   yaw.add(pitch)
+  // Add the yaw controller to the scene
   scene.add(yaw)
 
-  camera.position.z = 100
-  yaw.rotation.y = 2.25
-  pitch.rotation.x = -0.5
+  // Set the initial values for the rig
+  camera.position.x = config.position.x
+  camera.position.y = config.position.y
+  camera.position.z = config.position.z
+  pitch.rotation.x = config.rotation.x
+  yaw.rotation.y = config.rotation.y
+  camera.rotation.z = config.rotation.z
 
-  gui.add(camera.position, 'x', -100, 100, 0.001).name('Left/Right')
-  gui.add(camera.position, 'y', -100, 100, 0.001).name('Up/Down')
-  gui.add(camera.position, 'z', -100, 100, 0.001).name('Forward/Back')
-  gui.add(pitch.rotation, 'x', -Math.PI, Math.PI, 0.0001).name('Pitch')
-  gui.add(yaw.rotation, 'y', -Math.PI, Math.PI, 0.0001).name('Yaw')
-  gui.add(camera.rotation, 'z', -Math.PI, Math.PI, 0.0001).name('Rotate')
+  // Setup controls to test
+  if (config.gui) {
+    const guiCameraControls = gui.addFolder('Camera Controls')
+    guiCameraControls
+      .add(camera.position, 'x', -100, 100, 0.001)
+      .name('Left/Right')
+    guiCameraControls
+      .add(camera.position, 'y', -100, 100, 0.001)
+      .name('Down/Up')
+    guiCameraControls
+      .add(camera.position, 'z', -100, 100, 0.001)
+      .name('Forward/Back')
+    guiCameraControls
+      .add(pitch.rotation, 'x', -Math.PI, Math.PI, 0.0001)
+      .name('Pitch')
+    guiCameraControls
+      .add(yaw.rotation, 'y', -Math.PI, Math.PI, 0.0001)
+      .name('Yaw')
+    guiCameraControls
+      .add(camera.rotation, 'z', -Math.PI, Math.PI, 0.0001)
+      .name('Rotate')
+  }
+}
+
+function configObjects (scene) {
+  const params = {
+    color: 0xafafaf
+  }
+  const torus = new THREE.Mesh(
+    new THREE.TorusKnotGeometry(3.5, 1, 100, 16),
+    new THREE.MeshPhongMaterial({ color: params.color })
+  )
+  torus.castShadow = true
+  torus.name = 'torus'
+  torus.position.y += torus.geometry.parameters.radius * 2
+  scene.add(torus)
+  const guiMaterialControls = gui.addFolder('Object Controls')
+  guiMaterialControls.addColor(params, 'color').onChange(() => {
+    changeColor(torus.material, params.color)
+  })
+}
+
+function configScene (scene, camera, renderer) {
+  configLights(scene, camera)
+  configGround(scene, 100)
+  configCamera(camera, scene, {
+    gui: false,
+    position: {
+      x: 0,
+      y: 6,
+      z: 18
+    },
+    rotation: {
+      x: -0.25,
+      y: 3.14,
+      z: 0
+    }
+  })
+  configObjects(scene)
+  const fog = {
+    color: 0x000000,
+    density: 0.03
+  }
+  scene.fog = new THREE.FogExp2(fog.color, fog.density)
+  const guiSceneControls = gui.addFolder('Scene Controls')
+  guiSceneControls
+    .addColor(fog, 'color')
+    .name('Fog Color')
+    .onChange(() => {
+      changeColor(scene.fog, fog.color)
+      renderer.setClearColor(fog.color)
+    })
+  guiSceneControls.add(scene.fog, 'density', 0, 0.15, 0.001).name('Fog Density')
 }
 
 function init (container, configScene) {
@@ -130,11 +182,10 @@ function init (container, configScene) {
     cam.near,
     cam.far
   )
-  configScene(scene, camera)
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(container.width(), container.height())
   renderer.shadowMap.enabled = true
-  renderer.setClearColor('rgb(020,0,155)')
+  configScene(scene, camera, renderer)
   container.el.appendChild(renderer.domElement)
   return { scene, camera, renderer }
 }
@@ -142,40 +193,9 @@ function init (container, configScene) {
 function render (init) {
   const { scene, camera, renderer } = init
   renderer.render(scene, camera)
-  const time = clock.getElapsedTime()
-  fourQuadrantGrid(grid.size, (x, y, i, r) => {
-    const box = scene.getObjectByName(`box-${x}-${y}`)
-    let mod =
-      noise.perlin3(
-        x / grid.wavelength.x,
-        y / grid.wavelength.y,
-        time * grid.frequency
-      ) * grid.amplitude
-    mod += 0.001
-    if (grid.scale) {
-      let scale = mod + grid.scaleSize
-      if (scale > 4.5) scale = 4.5
-      box.scale.x = scale
-      box.scale.z = scale
-    } else {
-      box.scale.x = 1 + grid.scaleSize
-      box.scale.z = 1 + grid.scaleSize
-    }
-    if (grid.terrain) {
-      let ypos = mod * grid.tAmplitude
-      if (grid.tSmooth) {
-        if (ypos < -0.001) {
-          ypos /= grid.tSmoothAmount
-        }
-      }
-      if (grid.noInvert) {
-        ypos = Math.abs(ypos)
-      }
-      box.position.y = ypos
-    } else {
-      box.position.y = 0
-    }
-  })
+  const torus = scene.getObjectByName('torus')
+  torus.rotation.x += 0.025
+  torus.rotation.y += 0.025
   window.requestAnimationFrame(() => {
     render(init)
   })
@@ -183,3 +203,4 @@ function render (init) {
 
 window.environment3d = init(container, configScene)
 render(window.environment3d)
+console.log(window.environment3d)
