@@ -65,16 +65,15 @@ function configGround (scene, size) {
     new THREE.MeshStandardMaterial({
       color: 'rgb(125, 125, 125)',
       side: THREE.DoubleSide,
-      roughness: 1,
+      roughness: 0.75,
       metalness: 0.25,
-      map: textureLoader.load(
-        'http://portfolio.limitunknown.com/textures/fan_pattern_diffuse_010.png'
-      )
+      map: textureLoader.load('assets/fan_pattern_diffuse_010.png'),
+      bumpMap: textureLoader.load('assets/fan_pattern_bump_010.png')
     })
   )
   plane.name = 'myplane'
   plane.receiveShadow = true
-  plane.rotation.x += THREE.Math.degToRad(90)
+  plane.rotation.x += THREE.Math.degToRad(-90)
   scene.add(plane)
 }
 
@@ -154,7 +153,7 @@ function configScene (scene, camera, renderer) {
   configLights(scene, camera)
   configGround(scene, 100)
   configCamera(camera, scene, {
-    gui: false,
+    gui: true,
     position: {
       x: 0,
       y: 6,

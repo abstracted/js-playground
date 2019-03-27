@@ -31,6 +31,7 @@
     "gitignore": "^0.6.0",
     "lib": "^4.0.1",
     "noisejs-ilmiont": "^1.2.2",
+    "parcel-plugin-static-files-copy": "^2.0.0",
     "stylus": "^0.54.5",
     "three": "^0.101.1",
     "three-obj-loader": "^1.1.3",
