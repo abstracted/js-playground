@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
 const gui = new dat.GUI()
+const textureLoader = new THREE.TextureLoader()
 
 const container = {
   el: document.querySelector('#scene'),
@@ -61,9 +62,14 @@ function configLights (scene, camera) {
 function configGround (scene, size) {
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(size, size),
-    new THREE.MeshPhongMaterial({
+    new THREE.MeshStandardMaterial({
       color: 'rgb(125, 125, 125)',
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      roughness: 1,
+      metalness: 0.25,
+      map: textureLoader.load(
+        'http://portfolio.limitunknown.com/textures/fan_pattern_diffuse_010.png'
+      )
     })
   )
   plane.name = 'myplane'
@@ -118,21 +124,30 @@ function configCamera (camera, scene, config) {
 }
 
 function configObjects (scene) {
-  const params = {
-    color: 0xafafaf
+  const mat = {
+    color: 0xafafaf,
+    roughness: 0.5,
+    metalness: 0.75
   }
   const torus = new THREE.Mesh(
     new THREE.TorusKnotGeometry(3.5, 1, 100, 16),
-    new THREE.MeshPhongMaterial({ color: params.color })
+    new THREE.MeshStandardMaterial({
+      color: mat.color,
+      roughness: mat.roughness,
+      metalness: mat.metalness
+    })
   )
   torus.castShadow = true
   torus.name = 'torus'
   torus.position.y += torus.geometry.parameters.radius * 2
   scene.add(torus)
   const guiMaterialControls = gui.addFolder('Object Controls')
-  guiMaterialControls.addColor(params, 'color').onChange(() => {
-    changeColor(torus.material, params.color)
+  guiMaterialControls.addColor(mat, 'color').onChange(() => {
+    torus.material.color.set(mat.color)
   })
+  guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
+  guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
+  // guiMaterialControls.add(torus.material, 'wireframe')
 }
 
 function configScene (scene, camera, renderer) {
@@ -194,8 +209,8 @@ function render (init) {
   const { scene, camera, renderer } = init
   renderer.render(scene, camera)
   const torus = scene.getObjectByName('torus')
-  torus.rotation.x += 0.025
-  torus.rotation.y += 0.025
+  torus.rotation.x += 0.005
+  torus.rotation.y += 0.005
   window.requestAnimationFrame(() => {
     render(init)
   })
