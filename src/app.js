@@ -30,22 +30,28 @@ function configLights (scene, camera) {
     changeColor(amLight, params.amColor)
   })
   scene.add(amLight)
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 24, 24),
       new THREE.MeshBasicMaterial({ color: params.color })
     )
     const light = new THREE.PointLight(params.color, 1)
-    light.position.y = 10
-    light.position.x = -8
-    light.position.z = -8
+    light.intensity = 0.7
+    light.position.y = 100
+    light.position.x = 100
+    light.position.z = 100
     if (i > 0) {
-      light.intensity = 0.5
+      light.intensity = 1
       light.position.x = light.position.x * -1
     }
+    if (i === 2) {
+      light.intensity = 0.4
+      light.position.x = 0
+      light.position.z = -100
+    }
     light.castShadow = true
-    light.shadow.mapSize.width = 2048
-    light.shadow.mapSize.height = 2048
+    light.shadow.mapSize.width = 4096
+    light.shadow.mapSize.height = 4096
     light.add(sphere)
     scene.add(light)
     const folder = guiLightControls.addFolder(`Light ${i + 1}`)
@@ -54,21 +60,35 @@ function configLights (scene, camera) {
       changeColor(light, params.color)
       changeColor(sphere.material, params.color)
     })
-    folder.add(light.position, 'x', -20, 20, 0.1)
-    folder.add(light.position, 'y', 0, 20, 0.1)
-    folder.add(light.position, 'z', -20, 20, 0.1)
+    folder.add(light.position, 'x', -100, 100, 0.1)
+    folder.add(light.position, 'y', 0, 100, 0.1)
+    folder.add(light.position, 'z', -100, 100, 0.1)
   }
 }
 function configGround (scene, size) {
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(size, size),
     new THREE.MeshStandardMaterial({
-      color: 'rgb(125, 125, 125)',
+      color: 'rgb(70, 70, 70)',
       side: THREE.DoubleSide,
       roughness: 0.75,
       metalness: 0.25,
-      map: textureLoader.load('assets/fan_pattern_diffuse_010.png'),
-      bumpMap: textureLoader.load('assets/fan_pattern_bump_010.png')
+      map: textureLoader.load(
+        'assets/metal_woven_0_2048x2048_basecolor.png'
+      ),
+      bumpMap: textureLoader.load(
+        'assets/metal_woven_0_2048x2048_basecolor.png'
+      ),
+      bumpScale: 0.15,
+      metalnessMap: textureLoader.load(
+        'assets/metal_woven_0_2048x2048_metallic.jpg'
+      ),
+      roughnessMap: textureLoader.load(
+        'assets/metal_woven_0_2048x2048_roughness.png'
+      ),
+      normalMap: textureLoader.load(
+        'assets/metal_woven_0_2048x2048_normal.png'
+      )
     })
   )
   plane.name = 'myplane'
@@ -167,9 +187,10 @@ function configScene (scene, camera, renderer) {
   })
   configObjects(scene)
   const fog = {
-    color: 0x000000,
-    density: 0.03
+    color: 0x313131,
+    density: 0.015
   }
+  renderer.setClearColor(0x313131)
   scene.fog = new THREE.FogExp2(fog.color, fog.density)
   const guiSceneControls = gui.addFolder('Scene Controls')
   guiSceneControls
