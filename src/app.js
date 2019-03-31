@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
-
 const gui = new dat.GUI()
 const textureLoader = new THREE.TextureLoader()
 
@@ -16,25 +15,25 @@ const container = {
 function texture (texture) {
   return textureLoader.load(texture)
 }
-function changeColor (property, color) {
-  property.color.set(color)
-}
 function configLights (scene, camera, config) {
   const { lights, guiEnabled } = config
   let guiLightControls = false
   if (guiEnabled) {
     guiLightControls = gui.addFolder('Light Controls')
   }
-  function createAmbientLight (intesity, color, guiFolder, scene) {
+  function createAmbientLight (intensity, color, guiFolder, scene) {
     const params = {
       color: color
     }
-    const light = new THREE.AmbientLight(params.color, 0)
+    const light = new THREE.AmbientLight(params.color, intensity)
+    light.position.y = 100
     if (guiFolder) {
       const folder = guiFolder.addFolder('Ambient')
-      folder.add(light, 'intensity', 0, 5, 0.1)
+      folder.add(light, 'intensity', 0, 5, 0.01).onChange(() => {
+        console.log(light)
+      })
       folder.addColor(params, 'color').onChange(() => {
-        changeColor(light, params.color)
+        light.color.set(params.color)
       })
     }
     scene.add(light)
@@ -62,8 +61,8 @@ function configLights (scene, camera, config) {
       const folder = guiFolder.addFolder(`Light ${amt}`)
       folder.add(light, 'intensity', 0, 5, 0.1)
       folder.addColor(params, 'color').onChange(() => {
-        changeColor(light, params.color)
-        changeColor(sphere.material, params.color)
+        light.color.set(params.color)
+        sphere.material.color.set(params.color)
       })
       folder.add(light.position, 'x', -100, 100, 0.1, scene)
       folder.add(light.position, 'y', 0, 100, 0.1, scene)
@@ -93,8 +92,8 @@ function configFog (scene, renderer, config) {
       .addColor(config, 'color')
       .name('Fog Color')
       .onChange(() => {
-        changeColor(scene.fog, color)
-        renderer.setClearColor(color)
+        scene.fog.color.set(config.color)
+        renderer.setClearColor(config.color)
       })
     guiSceneControls
       .add(scene.fog, 'density', 0, 0.15, 0.001)
@@ -114,7 +113,7 @@ function configGround (scene, size, config) {
   if (guiEnabled) {
     const guiMaterialControls = gui.addFolder('Ground Controls')
     guiMaterialControls.addColor(material, 'color').onChange(() => {
-      changeColor(plane.material, material.color)
+      plane.material.color.set(material.color)
     })
     guiMaterialControls.add(plane.material, 'roughness', 0, 1, 0.001)
     guiMaterialControls.add(plane.material, 'metalness', 0, 1, 0.001)
@@ -156,14 +155,25 @@ function configCamera (camera, scene, config) {
   }
 }
 function configTorus (scene, config) {
-  const { material, guiEnabled } = config
+  const { materialType, material, guiEnabled } = config
+  let threeMaterial
+  switch (materialType) {
+    case 'Lambert':
+      threeMaterial = new THREE.MeshLambertMaterial(material)
+      break
+    case 'Phong':
+      threeMaterial = new THREE.MeshPhongMaterial(material)
+      break
+    case 'Standard':
+      threeMaterial = new THREE.MeshStandardMaterial(material)
+      break
+    default:
+      threeMaterial = new THREE.MeshBasicMaterial(material)
+      break
+  }
   const torus = new THREE.Mesh(
     new THREE.TorusKnotGeometry(3.5, 1, 100, 16),
-    new THREE.MeshStandardMaterial({
-      color: material.color,
-      roughness: material.roughness,
-      metalness: material.metalness
-    })
+    threeMaterial
   )
   torus.castShadow = true
   torus.name = 'torus'
@@ -174,8 +184,20 @@ function configTorus (scene, config) {
     guiMaterialControls.addColor(material, 'color').onChange(() => {
       torus.material.color.set(material.color)
     })
-    guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
-    guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
+    if (torus.material.roughness) {
+      guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
+    }
+    if (torus.material.metalness) {
+      guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
+    }
+    if (torus.material.specular) {
+      guiMaterialControls.addColor(material, 'specular').onChange(() => {
+        torus.material.color.set(material.specular)
+      })
+    }
+    if (torus.material.shininess) {
+      guiMaterialControls.add(torus.material, 'shininess', 0, 100, 0.001)
+    }
   }
 }
 
@@ -201,27 +223,25 @@ function configScene (scene, camera, renderer) {
       z: 0
     }
   })
-  configGround(scene, 100, {
-    guiEnabled: false,
-    material: {
-      color: 'rgb(70, 70, 70)',
-      side: THREE.DoubleSide,
-      roughness: 0.75,
-      metalness: 0.25
-    }
-  })
-  configTorus(scene, {
+  configGround(scene, 400, {
     guiEnabled: false,
     material: {
       color: 0xafafaf,
-      roughness: 0.5,
-      metalness: 0.75
+      roughness: 1,
+      metalness: 1
+    }
+  })
+  configTorus(scene, {
+    guiEnabled: true,
+    materialType: 'Basic',
+    material: {
+      color: 0xafafaf
     }
   })
   configFog(scene, renderer, {
     guiEnabled: false,
     color: 0x000000,
-    density: 0.025
+    density: 0.01
   })
 }
 
