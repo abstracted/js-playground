@@ -12,8 +12,27 @@ const container = {
     return this.el.getBoundingClientRect().width
   }
 }
-function texture (texture) {
-  return textureLoader.load(texture)
+function texture (options) {
+  let { xWrap, yWrap, xRepeat, yRepeat } = options
+  const { src, wrap, repeat } = options
+  xWrap = xWrap || wrap
+  yWrap = yWrap || wrap
+  xRepeat = xRepeat || repeat || 1
+  yRepeat = yRepeat || repeat || 1
+  function getWrap (type) {
+    let wrapType = THREE.ClampToEdgeWrapping
+    if (type === 'repeat') {
+      wrapType = THREE.RepeatWrapping
+    } else if (type === 'mirror') {
+      wrapType = THREE.MirroredRepeatWrapping
+    }
+    return wrapType
+  }
+  const tex = textureLoader.load(src)
+  tex.wrapS = getWrap(xWrap)
+  tex.wrapT = getWrap(yWrap)
+  tex.repeat.set(xRepeat, yRepeat)
+  return tex
 }
 function configLights (scene, camera, config) {
   const { lights, guiEnabled } = config
