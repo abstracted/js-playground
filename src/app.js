@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
+
 const gui = new dat.GUI()
 const textureLoader = new THREE.TextureLoader()
 
@@ -12,114 +13,127 @@ const container = {
     return this.el.getBoundingClientRect().width
   }
 }
-
+function texture (texture) {
+  return textureLoader.load(texture)
+}
 function changeColor (property, color) {
   property.color.set(color)
 }
-
-function configLights (scene, camera) {
-  const params = {
-    color: 0xffffff,
-    amColor: 0xffffff
+function configLights (scene, camera, config) {
+  const { lights, guiEnabled } = config
+  let guiLightControls = false
+  if (guiEnabled) {
+    guiLightControls = gui.addFolder('Light Controls')
   }
-  const guiLightControls = gui.addFolder('Light Controls')
-  const amLight = new THREE.AmbientLight(params.amColor, 0)
-  const guiAmbientLight = guiLightControls.addFolder('Ambient')
-  guiAmbientLight.add(amLight, 'intensity', 0, 5, 0.1)
-  guiAmbientLight.addColor(params, 'amColor').onChange(() => {
-    changeColor(amLight, params.amColor)
-  })
-  scene.add(amLight)
-  for (let i = 0; i < 3; i++) {
+  function createAmbientLight (intesity, color, guiFolder, scene) {
+    const params = {
+      color: color
+    }
+    const light = new THREE.AmbientLight(params.color, 0)
+    if (guiFolder) {
+      const folder = guiFolder.addFolder('Ambient')
+      folder.add(light, 'intensity', 0, 5, 0.1)
+      folder.addColor(params, 'color').onChange(() => {
+        changeColor(light, params.color)
+      })
+    }
+    scene.add(light)
+  }
+  function createPointLight (x, y, z, intensity, color, guiFolder, scene) {
+    const params = {
+      color: color
+    }
     const sphere = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 24, 24),
       new THREE.MeshBasicMaterial({ color: params.color })
     )
     const light = new THREE.PointLight(params.color, 1)
-    light.intensity = 0.7
-    light.position.y = 100
-    light.position.x = 100
-    light.position.z = 100
-    if (i > 0) {
-      light.intensity = 1
-      light.position.x = light.position.x * -1
-    }
-    if (i === 2) {
-      light.intensity = 0.4
-      light.position.x = 0
-      light.position.z = -100
-    }
+    light.intensity = intensity
+    light.position.x = x
+    light.position.y = y
+    light.position.z = z
     light.castShadow = true
     light.shadow.mapSize.width = 4096
     light.shadow.mapSize.height = 4096
     light.add(sphere)
     scene.add(light)
-    const folder = guiLightControls.addFolder(`Light ${i + 1}`)
-    folder.add(light, 'intensity', 0, 5, 0.1)
-    folder.addColor(params, 'color').onChange(() => {
-      changeColor(light, params.color)
-      changeColor(sphere.material, params.color)
-    })
-    folder.add(light.position, 'x', -100, 100, 0.1)
-    folder.add(light.position, 'y', 0, 100, 0.1)
-    folder.add(light.position, 'z', -100, 100, 0.1)
+    if (guiFolder) {
+      const amt = Object.keys(guiFolder.__folders).length + 1
+      const folder = guiFolder.addFolder(`Light ${amt}`)
+      folder.add(light, 'intensity', 0, 5, 0.1)
+      folder.addColor(params, 'color').onChange(() => {
+        changeColor(light, params.color)
+        changeColor(sphere.material, params.color)
+      })
+      folder.add(light.position, 'x', -100, 100, 0.1, scene)
+      folder.add(light.position, 'y', 0, 100, 0.1, scene)
+      folder.add(light.position, 'z', -100, 100, 0.1, scene)
+    }
+  }
+  createAmbientLight(0, 0x000000, guiLightControls, scene)
+  lights.forEach(light => {
+    createPointLight(
+      light.x,
+      light.y,
+      light.z,
+      light.intensity,
+      light.color,
+      guiLightControls,
+      scene
+    )
+  })
+}
+function configFog (scene, renderer, config) {
+  const { color, density, guiEnabled } = config
+  renderer.setClearColor(color)
+  scene.fog = new THREE.FogExp2(color, density)
+  if (guiEnabled) {
+    const guiSceneControls = gui.addFolder('Scene Controls')
+    guiSceneControls
+      .addColor(config, 'color')
+      .name('Fog Color')
+      .onChange(() => {
+        changeColor(scene.fog, color)
+        renderer.setClearColor(color)
+      })
+    guiSceneControls
+      .add(scene.fog, 'density', 0, 0.15, 0.001)
+      .name('Fog Density')
   }
 }
-function configGround (scene, size) {
+function configGround (scene, size, config) {
+  const { material, guiEnabled } = config
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(size, size),
-    new THREE.MeshStandardMaterial({
-      color: 'rgb(70, 70, 70)',
-      side: THREE.DoubleSide,
-      roughness: 0.75,
-      metalness: 0.25,
-      map: textureLoader.load(
-        'assets/metal_woven_0_2048x2048_basecolor.png'
-      ),
-      bumpMap: textureLoader.load(
-        'assets/metal_woven_0_2048x2048_basecolor.png'
-      ),
-      bumpScale: 0.15,
-      metalnessMap: textureLoader.load(
-        'assets/metal_woven_0_2048x2048_metallic.jpg'
-      ),
-      roughnessMap: textureLoader.load(
-        'assets/metal_woven_0_2048x2048_roughness.png'
-      ),
-      normalMap: textureLoader.load(
-        'assets/metal_woven_0_2048x2048_normal.png'
-      )
-    })
+    new THREE.MeshStandardMaterial(material)
   )
-  plane.name = 'myplane'
+  plane.name = 'plane'
   plane.receiveShadow = true
   plane.rotation.x += THREE.Math.degToRad(-90)
   scene.add(plane)
+  if (guiEnabled) {
+    const guiMaterialControls = gui.addFolder('Ground Controls')
+    guiMaterialControls.addColor(material, 'color').onChange(() => {
+      changeColor(plane.material, material.color)
+    })
+    guiMaterialControls.add(plane.material, 'roughness', 0, 1, 0.001)
+    guiMaterialControls.add(plane.material, 'metalness', 0, 1, 0.001)
+  }
 }
-
 function configCamera (camera, scene, config) {
-  // Create the null objects for pitch and yaw
+  const { position, rotation, guiEnabled } = config
   const pitch = new THREE.Group()
   const yaw = new THREE.Group()
-
-  // Add the camera to pitch controller
-  // Camera should be the deepest nested item in the rig
   pitch.add(camera)
-  // Add the pitch controller to yaw the contoller
   yaw.add(pitch)
-  // Add the yaw controller to the scene
   scene.add(yaw)
-
-  // Set the initial values for the rig
-  camera.position.x = config.position.x
-  camera.position.y = config.position.y
-  camera.position.z = config.position.z
-  pitch.rotation.x = config.rotation.x
-  yaw.rotation.y = config.rotation.y
-  camera.rotation.z = config.rotation.z
-
-  // Setup controls to test
-  if (config.gui) {
+  camera.position.x = position.x
+  camera.position.y = position.y
+  camera.position.z = position.z
+  pitch.rotation.x = rotation.x
+  yaw.rotation.y = rotation.y
+  camera.rotation.z = rotation.z
+  if (guiEnabled) {
     const guiCameraControls = gui.addFolder('Camera Controls')
     guiCameraControls
       .add(camera.position, 'x', -100, 100, 0.001)
@@ -141,43 +155,45 @@ function configCamera (camera, scene, config) {
       .name('Rotate')
   }
 }
-
-function configObjects (scene) {
-  const mat = {
-    color: 0xafafaf,
-    roughness: 0.5,
-    metalness: 0.75
-  }
+function configTorus (scene, config) {
+  const { material, guiEnabled } = config
   const torus = new THREE.Mesh(
     new THREE.TorusKnotGeometry(3.5, 1, 100, 16),
     new THREE.MeshStandardMaterial({
-      color: mat.color,
-      roughness: mat.roughness,
-      metalness: mat.metalness
+      color: material.color,
+      roughness: material.roughness,
+      metalness: material.metalness
     })
   )
   torus.castShadow = true
   torus.name = 'torus'
   torus.position.y += torus.geometry.parameters.radius * 2
   scene.add(torus)
-  const guiMaterialControls = gui.addFolder('Object Controls')
-  guiMaterialControls.addColor(mat, 'color').onChange(() => {
-    torus.material.color.set(mat.color)
-  })
-  guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
-  guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
-  // guiMaterialControls.add(torus.material, 'wireframe')
+  if (guiEnabled) {
+    const guiMaterialControls = gui.addFolder('Object Controls')
+    guiMaterialControls.addColor(material, 'color').onChange(() => {
+      torus.material.color.set(material.color)
+    })
+    guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
+    guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
+  }
 }
 
 function configScene (scene, camera, renderer) {
-  configLights(scene, camera)
-  configGround(scene, 100)
+  configLights(scene, camera, {
+    guiEnabled: false,
+    lights: [
+      { x: 100, y: 100, z: 100, intensity: 1.5, color: 0xffffff },
+      { x: -100, y: 100, z: 100, intensity: 1, color: 0xffffff },
+      { x: 0, y: 100, z: -100, intensity: 0.5, color: 0xffffff }
+    ]
+  })
   configCamera(camera, scene, {
-    gui: true,
+    guiEnabled: false,
     position: {
       x: 0,
       y: 6,
-      z: 18
+      z: 25
     },
     rotation: {
       x: -0.25,
@@ -185,41 +201,50 @@ function configScene (scene, camera, renderer) {
       z: 0
     }
   })
-  configObjects(scene)
-  const fog = {
-    color: 0x313131,
-    density: 0.015
-  }
-  renderer.setClearColor(0x313131)
-  scene.fog = new THREE.FogExp2(fog.color, fog.density)
-  const guiSceneControls = gui.addFolder('Scene Controls')
-  guiSceneControls
-    .addColor(fog, 'color')
-    .name('Fog Color')
-    .onChange(() => {
-      changeColor(scene.fog, fog.color)
-      renderer.setClearColor(fog.color)
-    })
-  guiSceneControls.add(scene.fog, 'density', 0, 0.15, 0.001).name('Fog Density')
+  configGround(scene, 100, {
+    guiEnabled: false,
+    material: {
+      color: 'rgb(70, 70, 70)',
+      side: THREE.DoubleSide,
+      roughness: 0.75,
+      metalness: 0.25
+    }
+  })
+  configTorus(scene, {
+    guiEnabled: false,
+    material: {
+      color: 0xafafaf,
+      roughness: 0.5,
+      metalness: 0.75
+    }
+  })
+  configFog(scene, renderer, {
+    guiEnabled: false,
+    color: 0x000000,
+    density: 0.025
+  })
 }
 
 function init (container, configScene) {
   const scene = new THREE.Scene()
-  const cam = {
-    fov: 55,
-    aspect: container.width() / container.height(),
-    near: 0.1,
-    far: 1000
-  }
   const camera = new THREE.PerspectiveCamera(
-    cam.fov,
-    cam.aspect,
-    cam.near,
-    cam.far
+    55,
+    container.width() / container.height(),
+    0.1,
+    1000
   )
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(container.width(), container.height())
   renderer.shadowMap.enabled = true
+  let windowResizeTimer
+  window.addEventListener('resize', () => {
+    clearTimeout(windowResizeTimer)
+    windowResizeTimer = setTimeout(() => {
+      camera.aspect = container.width() / container.height()
+      camera.updateProjectionMatrix()
+      renderer.setSize(container.width(), container.height())
+    }, 500)
+  })
   configScene(scene, camera, renderer)
   container.el.appendChild(renderer.domElement)
   return { scene, camera, renderer }
@@ -236,6 +261,5 @@ function render (init) {
   })
 }
 
-window.environment3d = init(container, configScene)
-render(window.environment3d)
-console.log(window.environment3d)
+const environment3d = init(container, configScene)
+render(environment3d)
