@@ -20,13 +20,13 @@ function texture (options) {
   xRepeat = xRepeat || repeat || 1
   yRepeat = yRepeat || repeat || 1
   function getWrap (type) {
-    let wrapType = THREE.ClampToEdgeWrapping
+    let wrap = THREE.ClampToEdgeWrapping
     if (type === 'repeat') {
-      wrapType = THREE.RepeatWrapping
+      wrap = THREE.RepeatWrapping
     } else if (type === 'mirror') {
-      wrapType = THREE.MirroredRepeatWrapping
+      wrap = THREE.MirroredRepeatWrapping
     }
-    return wrapType
+    return wrap
   }
   const tex = textureLoader.load(src)
   tex.wrapS = getWrap(xWrap)
