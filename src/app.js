@@ -71,8 +71,8 @@ function configLights (scene, camera, config) {
     light.position.y = y
     light.position.z = z
     light.castShadow = true
-    light.shadow.mapSize.width = 4096
-    light.shadow.mapSize.height = 4096
+    light.shadow.mapSize.width = 2048
+    light.shadow.mapSize.height = 2048
     light.add(sphere)
     scene.add(light)
     if (guiFolder) {
