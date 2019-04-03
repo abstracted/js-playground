@@ -34,6 +34,43 @@ function texture (options) {
   tex.repeat.set(xRepeat, yRepeat)
   return tex
 }
+function materialGUI (name, object, materials) {
+  const controls = gui.addFolder(`${name} Controls`)
+  if (object.material.color && materials.color) {
+    controls.addColor(materials, 'color').onChange(() => {
+      object.material.color.set(materials.color)
+    })
+  }
+  if (object.material.roughness) {
+    controls.add(object.material, 'roughness', 0, 1, 0.001)
+  }
+  if (object.material.metalness) {
+    controls.add(object.material, 'metalness', 0, 1, 0.001)
+  }
+  if (object.material.specular && materials.specular) {
+    controls.addColor(materials, 'specular').onChange(() => {
+      object.material.color.set(materials.specular)
+    })
+  }
+  if (object.material.shininess) {
+    controls.add(object.material, 'shininess', 0, 100, 0.001)
+  }
+  if (object.normalScale && materials.normalMap) {
+    console.log(materials.normalMap)
+    const params = {
+      normalScale: 0
+    }
+    controls.add(params, 'normalScale', -10, 10, 0.01).onChange(value => {
+      object.normalScale = new THREE.Vector2(value, value)
+    })
+  }
+  if (object.displacementScale && materials.displacementMap) {
+    controls.add(object.material, 'displacementScale', -10, 10, 0.01)
+  }
+  if (object.displacementBias && materials.displacementMap) {
+    controls.add(object.material, 'displacementBias', -5, 5, 0.01)
+  }
+}
 function configLights (scene, camera, config) {
   const { lights, guiEnabled } = config
   let guiLightControls = false
@@ -119,25 +156,6 @@ function configFog (scene, renderer, config) {
       .name('Fog Density')
   }
 }
-function configGround (scene, size, config) {
-  const { material, guiEnabled } = config
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(size, size),
-    new THREE.MeshStandardMaterial(material)
-  )
-  plane.name = 'plane'
-  plane.receiveShadow = true
-  plane.rotation.x += THREE.Math.degToRad(-90)
-  scene.add(plane)
-  if (guiEnabled) {
-    const guiMaterialControls = gui.addFolder('Ground Controls')
-    guiMaterialControls.addColor(material, 'color').onChange(() => {
-      plane.material.color.set(material.color)
-    })
-    guiMaterialControls.add(plane.material, 'roughness', 0, 1, 0.001)
-    guiMaterialControls.add(plane.material, 'metalness', 0, 1, 0.001)
-  }
-}
 function configCamera (camera, scene, config) {
   const { position, rotation, guiEnabled } = config
   const pitch = new THREE.Group()
@@ -174,49 +192,87 @@ function configCamera (camera, scene, config) {
   }
 }
 function configTorus (scene, config) {
-  const { materialType, material, guiEnabled } = config
+  const {
+    name,
+    materialType,
+    material,
+    guiEnabled,
+    position,
+    rotation,
+    objectType,
+    objectArgs
+  } = config
   let threeMaterial
-  switch (materialType) {
-    case 'Lambert':
+  switch (materialType.toLowerCase()) {
+    case 'lambert':
       threeMaterial = new THREE.MeshLambertMaterial(material)
       break
-    case 'Phong':
+    case 'phong':
       threeMaterial = new THREE.MeshPhongMaterial(material)
       break
-    case 'Standard':
+    case 'standard':
       threeMaterial = new THREE.MeshStandardMaterial(material)
       break
     default:
       threeMaterial = new THREE.MeshBasicMaterial(material)
       break
   }
-  const torus = new THREE.Mesh(
-    new THREE.TorusKnotGeometry(3.5, 1, 100, 16),
-    threeMaterial
-  )
-  torus.castShadow = true
-  torus.name = 'torus'
-  torus.position.y += torus.geometry.parameters.radius * 2
-  scene.add(torus)
+  const threeGeometry = (objectType, objectArgs) => {
+    const geometry = [
+      'BoxBufferGeometry',
+      'BoxGeometry',
+      'CircleBufferGeometry',
+      'CircleGeometry',
+      'ConeBufferGeometry',
+      'ConeGeometry',
+      'CylinderBufferGeometry',
+      'CylinderGeometry',
+      'DodecahedronBufferGeometry',
+      'DodecahedronGeometry',
+      'EdgesGeometry',
+      'ExtrudeBufferGeometry',
+      'ExtrudeGeometry',
+      'IcosahedronBufferGeometry',
+      'IcosahedronGeometry',
+      'LatheBufferGeometry',
+      'LatheGeometry',
+      'OctahedronBufferGeometry',
+      'OctahedronGeometry',
+      'ParametricBufferGeometry',
+      'ParametricGeometry',
+      'PlaneBufferGeometry',
+      'PlaneGeometry',
+      'PolyhedronBufferGeometry',
+      'PolyhedronGeometry',
+      'RingBufferGeometry',
+      'RingGeometry',
+      'ShapeBufferGeometry',
+      'ShapeGeometry',
+      'SphereBufferGeometry',
+      'SphereGeometry',
+      'TetrahedronBufferGeometry',
+      'TetrahedronGeometry',
+      'TextBufferGeometry',
+      'TextGeometry',
+      'TorusBufferGeometry',
+      'TorusGeometry',
+      'TorusKnotBufferGeometry',
+      'TorusKnotGeometry',
+      'TubeBufferGeometry',
+      'TubeGeometry',
+      'WireframeGeometry'
+    ]
+    const geometryType = geometry.filter(
+      geo => objectType.toLowerCase() === geo.toLowerCase()
+    )
+  }
+  const objectName = name || objectType + scene.length
+  const threeMesh = new THREE.Mesh(threeGeometry, threeMaterial)
+  threeMesh.castShadow = true
+  threeMesh.name = objectName
+  scene.add(threeMesh)
   if (guiEnabled) {
-    const guiMaterialControls = gui.addFolder('Object Controls')
-    guiMaterialControls.addColor(material, 'color').onChange(() => {
-      torus.material.color.set(material.color)
-    })
-    if (torus.material.roughness) {
-      guiMaterialControls.add(torus.material, 'roughness', 0, 1, 0.001)
-    }
-    if (torus.material.metalness) {
-      guiMaterialControls.add(torus.material, 'metalness', 0, 1, 0.001)
-    }
-    if (torus.material.specular) {
-      guiMaterialControls.addColor(material, 'specular').onChange(() => {
-        torus.material.color.set(material.specular)
-      })
-    }
-    if (torus.material.shininess) {
-      guiMaterialControls.add(torus.material, 'shininess', 0, 100, 0.001)
-    }
+    materialGUI(objectName, threeMesh, material)
   }
 }
 
@@ -243,11 +299,16 @@ function configScene (scene, camera, renderer) {
     }
   })
   configGround(scene, 400, {
-    guiEnabled: false,
+    guiEnabled: true,
     material: {
-      color: 0xafafaf,
+      color: 0xffffff,
       roughness: 1,
-      metalness: 1
+      metalness: 0,
+      map: texture({
+        src: 'assets/RockyDirt2_diffuse.png',
+        wrap: 'repeat',
+        repeat: 5
+      })
     }
   })
   configTorus(scene, {
