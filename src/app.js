@@ -71,6 +71,82 @@ function materialGUI (name, object, materials) {
     controls.add(object.material, 'displacementBias', -5, 5, 0.01)
   }
 }
+function getGeometry (geometryType, geometryArgs) {
+  const options = [
+    'BoxBufferGeometry',
+    'BoxGeometry',
+    'CircleBufferGeometry',
+    'CircleGeometry',
+    'ConeBufferGeometry',
+    'ConeGeometry',
+    'CylinderBufferGeometry',
+    'CylinderGeometry',
+    'DodecahedronBufferGeometry',
+    'DodecahedronGeometry',
+    'EdgesGeometry',
+    'ExtrudeBufferGeometry',
+    'ExtrudeGeometry',
+    'IcosahedronBufferGeometry',
+    'IcosahedronGeometry',
+    'LatheBufferGeometry',
+    'LatheGeometry',
+    'OctahedronBufferGeometry',
+    'OctahedronGeometry',
+    'ParametricBufferGeometry',
+    'ParametricGeometry',
+    'PlaneBufferGeometry',
+    'PlaneGeometry',
+    'PolyhedronBufferGeometry',
+    'PolyhedronGeometry',
+    'RingBufferGeometry',
+    'RingGeometry',
+    'ShapeBufferGeometry',
+    'ShapeGeometry',
+    'SphereBufferGeometry',
+    'SphereGeometry',
+    'TetrahedronBufferGeometry',
+    'TetrahedronGeometry',
+    'TextBufferGeometry',
+    'TextGeometry',
+    'TorusBufferGeometry',
+    'TorusGeometry',
+    'TorusKnotBufferGeometry',
+    'TorusKnotGeometry',
+    'TubeBufferGeometry',
+    'TubeGeometry',
+    'WireframeGeometry'
+  ]
+  let geo = options.filter(option =>
+    `${geometryType}Geometry`.toLowerCase() === option.toLowerCase()
+  )
+  if (geo.length > 0) {
+    geo = geo[0]
+    return new THREE[geo](...geometryArgs)
+  } else {
+    return new THREE.BoxGeometry(1, 1, 1)
+  }
+}
+function getMaterial (materialType, material) {
+  const options = [
+    'MeshBasicMaterial',
+    'MeshDepthMaterial',
+    'MeshLambertMaterial',
+    'MeshNormalMaterial',
+    'MeshPhongMaterial',
+    'MeshPhysicalMaterial',
+    'MeshStandardMaterial',
+    'MeshToonMaterial'
+  ]
+  let mat = options.filter(option =>
+    `Mesh${materialType}Material`.toLowerCase() === option.toLowerCase()
+  )
+  if (mat.length > 0) {
+    mat = mat[0]
+    return new THREE[mat](material)
+  } else {
+    return new THREE.MeshBasicMaterial({ color: 0xffffff })
+  }
+}
 function configLights (scene, camera, config) {
   const { lights, guiEnabled } = config
   let guiLightControls = false
@@ -82,7 +158,7 @@ function configLights (scene, camera, config) {
       color: color
     }
     const light = new THREE.AmbientLight(params.color, intensity)
-    light.position.y = 100
+    light.position.y = 10000
     if (guiFolder) {
       const folder = guiFolder.addFolder('Ambient')
       folder.add(light, 'intensity', 0, 5, 0.01).onChange(() => {
@@ -99,17 +175,17 @@ function configLights (scene, camera, config) {
       color: color
     }
     const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 24, 24),
+      new THREE.SphereGeometry(1, 24, 24),
       new THREE.MeshBasicMaterial({ color: params.color })
     )
     const light = new THREE.PointLight(params.color, 1)
     light.intensity = intensity
-    light.position.x = x
-    light.position.y = y
-    light.position.z = z
+    light.position.x = x || 0
+    light.position.y = y || 0
+    light.position.z = z || 0
     light.castShadow = true
-    light.shadow.mapSize.width = 2048
-    light.shadow.mapSize.height = 2048
+    light.shadow.mapSize.width = lights.shadowMap || 2048
+    light.shadow.mapSize.height = lights.shadowMap || 2048
     light.add(sphere)
     scene.add(light)
     if (guiFolder) {
@@ -191,7 +267,7 @@ function configCamera (camera, scene, config) {
       .name('Rotate')
   }
 }
-function configTorus (scene, config) {
+function configObject (scene, config) {
   const {
     name,
     materialType,
@@ -199,76 +275,21 @@ function configTorus (scene, config) {
     guiEnabled,
     position,
     rotation,
-    objectType,
-    objectArgs
+    geometryType,
+    geometryArgs,
+    shadow
   } = config
-  let threeMaterial
-  switch (materialType.toLowerCase()) {
-    case 'lambert':
-      threeMaterial = new THREE.MeshLambertMaterial(material)
-      break
-    case 'phong':
-      threeMaterial = new THREE.MeshPhongMaterial(material)
-      break
-    case 'standard':
-      threeMaterial = new THREE.MeshStandardMaterial(material)
-      break
-    default:
-      threeMaterial = new THREE.MeshBasicMaterial(material)
-      break
-  }
-  const threeGeometry = (objectType, objectArgs) => {
-    const geometry = [
-      'BoxBufferGeometry',
-      'BoxGeometry',
-      'CircleBufferGeometry',
-      'CircleGeometry',
-      'ConeBufferGeometry',
-      'ConeGeometry',
-      'CylinderBufferGeometry',
-      'CylinderGeometry',
-      'DodecahedronBufferGeometry',
-      'DodecahedronGeometry',
-      'EdgesGeometry',
-      'ExtrudeBufferGeometry',
-      'ExtrudeGeometry',
-      'IcosahedronBufferGeometry',
-      'IcosahedronGeometry',
-      'LatheBufferGeometry',
-      'LatheGeometry',
-      'OctahedronBufferGeometry',
-      'OctahedronGeometry',
-      'ParametricBufferGeometry',
-      'ParametricGeometry',
-      'PlaneBufferGeometry',
-      'PlaneGeometry',
-      'PolyhedronBufferGeometry',
-      'PolyhedronGeometry',
-      'RingBufferGeometry',
-      'RingGeometry',
-      'ShapeBufferGeometry',
-      'ShapeGeometry',
-      'SphereBufferGeometry',
-      'SphereGeometry',
-      'TetrahedronBufferGeometry',
-      'TetrahedronGeometry',
-      'TextBufferGeometry',
-      'TextGeometry',
-      'TorusBufferGeometry',
-      'TorusGeometry',
-      'TorusKnotBufferGeometry',
-      'TorusKnotGeometry',
-      'TubeBufferGeometry',
-      'TubeGeometry',
-      'WireframeGeometry'
-    ]
-    const geometryType = geometry.filter(
-      geo => objectType.toLowerCase() === geo.toLowerCase()
-    )
-  }
-  const objectName = name || objectType + scene.length
+  const threeMaterial = getMaterial(materialType, material)
+  const threeGeometry = getGeometry(geometryType, geometryArgs)
+  const objectName = name || geometryType
   const threeMesh = new THREE.Mesh(threeGeometry, threeMaterial)
-  threeMesh.castShadow = true
+  Array.from(['x', 'y', 'z']).forEach(coor => {
+    let deg = rotation[coor] || 0
+    threeMesh.position[coor] = position[coor] || 0
+    threeMesh.rotation[coor] = THREE.Math.degToRad(deg)
+  })
+  threeMesh.castShadow = shadow ? shadow.cast : true
+  threeMesh.receiveShadow = shadow ? shadow.receive : true
   threeMesh.name = objectName
   scene.add(threeMesh)
   if (guiEnabled) {
@@ -278,15 +299,15 @@ function configTorus (scene, config) {
 
 function configScene (scene, camera, renderer) {
   configLights(scene, camera, {
-    guiEnabled: false,
+    guiEnabled: true,
     lights: [
-      { x: 100, y: 100, z: 100, intensity: 1.5, color: 0xffffff },
-      { x: -100, y: 100, z: 100, intensity: 1, color: 0xffffff },
-      { x: 0, y: 100, z: -100, intensity: 0.5, color: 0xffffff }
+      { x: 100, y: 100, z: 100, intensity: 1.5, color: 0xffffff, shadowMap: 2048 },
+      { x: -100, y: 100, z: 100, intensity: 1, color: 0xffffff, shadowMap: 2048 },
+      { x: 0, y: 100, z: -100, intensity: 0.5, color: 0xffffff, shadowMap: 2048 }
     ]
   })
   configCamera(camera, scene, {
-    guiEnabled: false,
+    guiEnabled: true,
     position: {
       x: 0,
       y: 6,
@@ -298,24 +319,54 @@ function configScene (scene, camera, renderer) {
       z: 0
     }
   })
-  configGround(scene, 400, {
+  configObject(scene, {
     guiEnabled: true,
+    name: 'Ground',
+    geometryType: 'Plane',
+    geometryArgs: [400, 400],
+    materialType: 'Standard',
     material: {
-      color: 0xffffff,
+      color: 0xafafaf,
       roughness: 1,
-      metalness: 0,
-      map: texture({
-        src: 'assets/RockyDirt2_diffuse.png',
-        wrap: 'repeat',
-        repeat: 5
-      })
+      metalness: 1
+    },
+    position: {
+      x: 0,
+      y: 0,
+      z: 0
+    },
+    rotation: {
+      x: -90,
+      y: 0,
+      z: 0
+    },
+    shadow: {
+      cast: false,
+      receive: true
     }
   })
-  configTorus(scene, {
+  configObject(scene, {
     guiEnabled: true,
+    name: 'Torus',
+    geometryType: 'TorusKnot',
+    geometryArgs: [3.5, 1, 100, 16],
     materialType: 'Basic',
     material: {
-      color: 0xafafaf
+      color: 0xffffff
+    },
+    position: {
+      x: 0,
+      y: 8,
+      z: 0
+    },
+    rotation: {
+      x: 0,
+      y: 0,
+      z: 0
+    },
+    shadow: {
+      cast: true,
+      receive: true
     }
   })
   configFog(scene, renderer, {
@@ -353,7 +404,7 @@ function init (container, configScene) {
 function render (init) {
   const { scene, camera, renderer } = init
   renderer.render(scene, camera)
-  const torus = scene.getObjectByName('torus')
+  const torus = scene.getObjectByName('Torus')
   torus.rotation.x += 0.005
   torus.rotation.y += 0.005
   window.requestAnimationFrame(() => {
