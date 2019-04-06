@@ -49,7 +49,7 @@ function materialGUI (name, object, materials) {
   }
   if (object.material.specular && materials.specular) {
     controls.addColor(materials, 'specular').onChange(() => {
-      object.material.color.set(materials.specular)
+      object.material.specular.set(materials.specular)
     })
   }
   if (object.material.shininess) {
