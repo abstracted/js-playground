@@ -371,7 +371,7 @@ function configScene (scene, camera, renderer) {
     },
     shadow: {
       cast: true,
-      receive: true
+      receive: false
     }
   })
   configFog(scene, renderer, {
