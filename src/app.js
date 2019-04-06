@@ -298,6 +298,14 @@ function configObject (scene, config) {
 }
 
 function configScene (scene, camera, renderer) {
+  const torusMaterial = {
+    color: 0xffffff
+  }
+  const groundMaterial = {
+    color: 0xafafaf,
+    roughness: 1,
+    metalness: 1
+  }
   configLights(scene, camera, {
     guiEnabled: true,
     lights: [
@@ -325,11 +333,7 @@ function configScene (scene, camera, renderer) {
     geometryType: 'Plane',
     geometryArgs: [400, 400],
     materialType: 'Standard',
-    material: {
-      color: 0xafafaf,
-      roughness: 1,
-      metalness: 1
-    },
+    material: groundMaterial,
     position: {
       x: 0,
       y: 0,
@@ -351,9 +355,7 @@ function configScene (scene, camera, renderer) {
     geometryType: 'TorusKnot',
     geometryArgs: [3.5, 1, 100, 16],
     materialType: 'Basic',
-    material: {
-      color: 0xffffff
-    },
+    material: torusMaterial,
     position: {
       x: 0,
       y: 8,
