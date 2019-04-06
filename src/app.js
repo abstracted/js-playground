@@ -115,8 +115,8 @@ function getGeometry (geometryType, geometryArgs) {
     'TubeGeometry',
     'WireframeGeometry'
   ]
-  let geo = options.filter(option =>
-    `${geometryType}Geometry`.toLowerCase() === option.toLowerCase()
+  let geo = options.filter(
+    option => `${geometryType}Geometry`.toLowerCase() === option.toLowerCase()
   )
   if (geo.length > 0) {
     geo = geo[0]
@@ -136,8 +136,9 @@ function getMaterial (materialType, material) {
     'MeshStandardMaterial',
     'MeshToonMaterial'
   ]
-  let mat = options.filter(option =>
-    `Mesh${materialType}Material`.toLowerCase() === option.toLowerCase()
+  let mat = options.filter(
+    option =>
+      `Mesh${materialType}Material`.toLowerCase() === option.toLowerCase()
   )
   if (mat.length > 0) {
     mat = mat[0]
@@ -312,9 +313,30 @@ function configScene (scene, camera, renderer) {
   configLights(scene, camera, {
     guiEnabled: true,
     lights: [
-      { x: 100, y: 100, z: 100, intensity: 1.5, color: 0xffffff, shadowMap: 2048 },
-      { x: -100, y: 100, z: 100, intensity: 1, color: 0xffffff, shadowMap: 2048 },
-      { x: 0, y: 100, z: -100, intensity: 0.5, color: 0xffffff, shadowMap: 2048 }
+      {
+        x: 100,
+        y: 100,
+        z: 100,
+        intensity: 1.5,
+        color: 0xffffff,
+        shadowMap: 2048
+      },
+      {
+        x: -100,
+        y: 100,
+        z: 100,
+        intensity: 1,
+        color: 0xffffff,
+        shadowMap: 2048
+      },
+      {
+        x: 0,
+        y: 100,
+        z: -100,
+        intensity: 0.5,
+        color: 0xffffff,
+        shadowMap: 2048
+      }
     ]
   })
   configCamera(camera, scene, {
