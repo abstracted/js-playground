@@ -56,7 +56,6 @@ function materialGUI (name, object, materials) {
     controls.add(object.material, 'shininess', 0, 100, 0.001)
   }
   if (object.normalScale && materials.normalMap) {
-    console.log(materials.normalMap)
     const params = {
       normalScale: 0
     }
@@ -161,9 +160,7 @@ function configLights (scene, camera, config) {
     light.position.y = 10000
     if (guiFolder) {
       const folder = guiFolder.addFolder('Ambient')
-      folder.add(light, 'intensity', 0, 5, 0.01).onChange(() => {
-        console.log(light)
-      })
+      folder.add(light, 'intensity', 0, 5, 0.01)
       folder.addColor(params, 'color').onChange(() => {
         light.color.set(params.color)
       })
