@@ -19,18 +19,18 @@ function texture (options) {
   yWrap = yWrap || wrap
   xRepeat = xRepeat || repeat || 1
   yRepeat = yRepeat || repeat || 1
-  function getWrap (type) {
-    let wrap = THREE.ClampToEdgeWrapping
+  function getWrapping (type) {
+    let wrapping = THREE.ClampToEdgeWrapping
     if (type === 'repeat') {
-      wrap = THREE.RepeatWrapping
+      wrapping = THREE.RepeatWrapping
     } else if (type === 'mirror') {
-      wrap = THREE.MirroredRepeatWrapping
+      wrapping = THREE.MirroredRepeatWrapping
     }
-    return wrap
+    return wrapping
   }
   const tex = textureLoader.load(src)
-  tex.wrapS = getWrap(xWrap)
-  tex.wrapT = getWrap(yWrap)
+  tex.wrapS = getWrapping(xWrap)
+  tex.wrapT = getWrapping(yWrap)
   tex.repeat.set(xRepeat, yRepeat)
   return tex
 }
@@ -55,97 +55,38 @@ function materialGUI (name, object, materials) {
   if (object.material.shininess) {
     controls.add(object.material, 'shininess', 0, 100, 0.001)
   }
-  if (object.normalScale && materials.normalMap) {
+  if (object.material.normalScale && materials.normalMap) {
     const params = {
       normalScale: 0
     }
     controls.add(params, 'normalScale', -10, 10, 0.01).onChange(value => {
-      object.normalScale = new THREE.Vector2(value, value)
+      object.material.normalScale = new THREE.Vector2(value, value)
     })
   }
-  if (object.displacementScale && materials.displacementMap) {
-    controls.add(object.material, 'displacementScale', -10, 10, 0.01)
+  if (object.material.displacementScale && materials.displacementMap) {
+    controls.add(object.material, 'displacementScale', -100, 100, 0.01)
   }
-  if (object.displacementBias && materials.displacementMap) {
-    controls.add(object.material, 'displacementBias', -5, 5, 0.01)
+  if (object.material.displacementBias && materials.displacementMap) {
+    controls.add(object.material, 'displacementBias', -50, 50, 0.01)
   }
 }
 function getGeometry (geometryType, geometryArgs) {
-  const options = [
-    'BoxBufferGeometry',
-    'BoxGeometry',
-    'CircleBufferGeometry',
-    'CircleGeometry',
-    'ConeBufferGeometry',
-    'ConeGeometry',
-    'CylinderBufferGeometry',
-    'CylinderGeometry',
-    'DodecahedronBufferGeometry',
-    'DodecahedronGeometry',
-    'EdgesGeometry',
-    'ExtrudeBufferGeometry',
-    'ExtrudeGeometry',
-    'IcosahedronBufferGeometry',
-    'IcosahedronGeometry',
-    'LatheBufferGeometry',
-    'LatheGeometry',
-    'OctahedronBufferGeometry',
-    'OctahedronGeometry',
-    'ParametricBufferGeometry',
-    'ParametricGeometry',
-    'PlaneBufferGeometry',
-    'PlaneGeometry',
-    'PolyhedronBufferGeometry',
-    'PolyhedronGeometry',
-    'RingBufferGeometry',
-    'RingGeometry',
-    'ShapeBufferGeometry',
-    'ShapeGeometry',
-    'SphereBufferGeometry',
-    'SphereGeometry',
-    'TetrahedronBufferGeometry',
-    'TetrahedronGeometry',
-    'TextBufferGeometry',
-    'TextGeometry',
-    'TorusBufferGeometry',
-    'TorusGeometry',
-    'TorusKnotBufferGeometry',
-    'TorusKnotGeometry',
-    'TubeBufferGeometry',
-    'TubeGeometry',
-    'WireframeGeometry'
-  ]
-  let geo = options.filter(
-    option => `${geometryType}Geometry`.toLowerCase() === option.toLowerCase()
-  )
-  if (geo.length > 0) {
-    geo = geo[0]
-    return new THREE[geo](...geometryArgs)
-  } else {
-    return new THREE.BoxGeometry(1, 1, 1)
+  let geo = new THREE.BoxGeometry(1, 1)
+  try {
+    geo = new THREE[`${geometryType}Geometry`](...geometryArgs)
+  } catch (error) {
+    console.error(`Geometry type "${geometryType}" doesn't exist.`, error)
   }
+  return geo
 }
 function getMaterial (materialType, material) {
-  const options = [
-    'MeshBasicMaterial',
-    'MeshDepthMaterial',
-    'MeshLambertMaterial',
-    'MeshNormalMaterial',
-    'MeshPhongMaterial',
-    'MeshPhysicalMaterial',
-    'MeshStandardMaterial',
-    'MeshToonMaterial'
-  ]
-  let mat = options.filter(
-    option =>
-      `Mesh${materialType}Material`.toLowerCase() === option.toLowerCase()
-  )
-  if (mat.length > 0) {
-    mat = mat[0]
-    return new THREE[mat](material)
-  } else {
-    return new THREE.MeshBasicMaterial({ color: 0xffffff })
+  let mat = new THREE.MeshBasicMaterial({ color: 0xafafaf })
+  try {
+    mat = new THREE[`Mesh${materialType}Material`](material)
+  } catch (error) {
+    console.error(`Material type "${materialType}" doesn't exist.`, error)
   }
+  return mat
 }
 function configLights (scene, camera, config) {
   const { lights, guiEnabled } = config
@@ -279,19 +220,44 @@ function configObject (scene, config) {
   } = config
   const threeMaterial = getMaterial(materialType, material)
   const threeGeometry = getGeometry(geometryType, geometryArgs)
-  const objectName = name || geometryType
+  // Adjust UVs for displacement map repeat
+  // https://stackoverflow.com/questions/38820010/
+  // Multiplies the UVs of the geometry by the repeat value of the displacement map
+  // Divides the repeat value of the rest of the maps accordingly
+  if (material.displacementMap) {
+    const { x, y } = material.displacementMap.repeat
+    threeGeometry.faceVertexUvs[0].forEach(vec3 => {
+      vec3.forEach(vec2 => {
+        vec2.x *= x
+        vec2.y *= y
+      })
+    })
+    threeGeometry.uvsNeedUpdate = true
+    Object.keys(threeMaterial).forEach(prop => {
+      if (
+        prop.match(/[a-z]*[mM]ap(?!\w+)/) &&
+        prop !== 'lightMap' &&
+        prop !== 'envMap' &&
+        prop !== 'displacementMap'
+      ) {
+        const map = threeMaterial[prop]
+        if (map && map.repeat) {
+          threeMaterial[prop].repeat.set(map.repeat.x / x, map.repeat.y / y)
+        }
+      }
+    })
+  }
   const threeMesh = new THREE.Mesh(threeGeometry, threeMaterial)
   Array.from(['x', 'y', 'z']).forEach(coor => {
-    let deg = rotation[coor] || 0
     threeMesh.position[coor] = position[coor] || 0
-    threeMesh.rotation[coor] = THREE.Math.degToRad(deg)
+    threeMesh.rotation[coor] = THREE.Math.degToRad(rotation[coor])
   })
   threeMesh.castShadow = shadow ? shadow.cast : true
   threeMesh.receiveShadow = shadow ? shadow.receive : true
-  threeMesh.name = objectName
+  threeMesh.name = name
   scene.add(threeMesh)
   if (guiEnabled) {
-    materialGUI(objectName, threeMesh, material)
+    materialGUI(name, threeMesh, material)
   }
 }
 
@@ -356,7 +322,7 @@ function configScene (scene, camera, renderer) {
     guiEnabled: true,
     name: 'Ground',
     geometryType: 'Plane',
-    geometryArgs: [400, 400],
+    geometryArgs: [400, 400, 400, 400],
     materialType: ground.materialType,
     material: ground.material,
     position: {
