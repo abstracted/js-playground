@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
+import { SubdivisionModifier } from 'three-full'
 const gui = new dat.GUI()
 const textureLoader = new THREE.TextureLoader()
 
@@ -216,7 +217,8 @@ function configObject (scene, config) {
     rotation,
     geometryType,
     geometryArgs,
-    shadow
+    shadow,
+    subdivide
   } = config
   const threeMaterial = getMaterial(materialType, material)
   const threeGeometry = getGeometry(geometryType, geometryArgs)
@@ -247,6 +249,13 @@ function configObject (scene, config) {
       }
     })
   }
+  if (
+    typeof subdivide === 'number' &&
+    geometryType.includes('Plane') !== true
+  ) {
+    const modifier = new SubdivisionModifier(subdivide)
+    modifier.modify(threeGeometry)
+  }
   const threeMesh = new THREE.Mesh(threeGeometry, threeMaterial)
   Array.from(['x', 'y', 'z']).forEach(coor => {
     threeMesh.position[coor] = position[coor] || 0
@@ -262,18 +271,43 @@ function configObject (scene, config) {
 }
 
 function configScene (scene, camera, renderer) {
-  const torus = {
-    materialType: 'Basic',
+  const box = {
+    materialType: 'Standard',
     material: {
-      color: 0xffffff
+      color: 0xffffff,
+      roughness: 0.9,
+      metalness: 1
     }
   }
   const ground = {
     materialType: 'Standard',
     material: {
       color: 0xafafaf,
-      roughness: 1,
-      metalness: 1
+      roughness: 0.9,
+      metalness: 1,
+      map: texture({
+        src: 'assets/RockyDirt2_diffuse.png',
+        wrap: 'repeat',
+        repeat: 2
+      }),
+      roughnessMap: texture({
+        src: 'assets/RockyDirt2_roughness.png',
+        wrap: 'repeat',
+        repeat: 2
+      }),
+      normalMap: texture({
+        src: 'assets/RockyDirt2_normal.png',
+        wrap: 'repeat',
+        repeat: 2
+      }),
+      normalScale: new THREE.Vector2(1, 1),
+      displacementMap: texture({
+        src: 'assets/RockyDirt2_height.png',
+        wrap: 'repeat',
+        repeat: 2
+      }),
+      displacementScale: 8,
+      displacementBias: -5
     }
   }
   configLights(scene, camera, {
@@ -322,7 +356,7 @@ function configScene (scene, camera, renderer) {
     guiEnabled: true,
     name: 'Ground',
     geometryType: 'Plane',
-    geometryArgs: [400, 400, 400, 400],
+    geometryArgs: [200, 200, 400, 400],
     materialType: ground.materialType,
     material: ground.material,
     position: {
@@ -342,11 +376,11 @@ function configScene (scene, camera, renderer) {
   })
   configObject(scene, {
     guiEnabled: true,
-    name: 'Torus',
-    geometryType: 'TorusKnot',
-    geometryArgs: [3.5, 1, 100, 16],
-    materialType: torus.materialType,
-    material: torus.material,
+    name: 'Box',
+    geometryType: 'Box',
+    geometryArgs: [7, 7, 7, 100, 100],
+    materialType: box.materialType,
+    material: box.material,
     position: {
       x: 0,
       y: 8,
@@ -360,7 +394,8 @@ function configScene (scene, camera, renderer) {
     shadow: {
       cast: true,
       receive: false
-    }
+    },
+    subdivide: 2
   })
   configFog(scene, renderer, {
     guiEnabled: false,
@@ -397,9 +432,9 @@ function init (container, configScene) {
 function render (init) {
   const { scene, camera, renderer } = init
   renderer.render(scene, camera)
-  const torus = scene.getObjectByName('Torus')
-  torus.rotation.x += 0.005
-  torus.rotation.y += 0.005
+  const box = scene.getObjectByName('Box')
+  box.rotation.x += 0.005
+  box.rotation.y += 0.005
   window.requestAnimationFrame(() => {
     render(init)
   })
